@@ -1,0 +1,4 @@
+# The contract digest is over the original bytes of each snapshot file.
+/src/app/core/api/contract/*.json text eol=lf
+/src/app/core/api/contract/fixtures/*.json text eol=lf
+/src/app/core/api/contract/*.generated.ts text eol=lf

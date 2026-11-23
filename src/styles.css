@@ -1,0 +1,41 @@
+:root {
+  color-scheme: light dark;
+  font-family: system-ui, sans-serif;
+  line-height: 1.55;
+  color: light-dark(#172921, #f1f7ee);
+  background: light-dark(#f4f8ef, #13211b);
+}
+
+body {
+  margin: 0;
+}
+
+main {
+  box-sizing: border-box;
+  max-width: 48rem;
+  margin-inline: auto;
+  padding: clamp(2rem, 10vw, 7rem) 1.5rem;
+}
+
+h1 {
+  margin-block: 0 0.5rem;
+  font-size: clamp(2.5rem, 8vw, 4.5rem);
+  line-height: 1.05;
+  letter-spacing: -0.05em;
+}
+
+p {
+  margin-block: 0;
+}
+
+section {
+  margin-block-start: 2rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid light-dark(#6b8674, #718b78);
+  border-radius: 0.75rem;
+}
+
+h2 {
+  margin-block: 0 0.5rem;
+  font-size: 1.125rem;
+}
