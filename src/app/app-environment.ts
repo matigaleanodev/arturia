@@ -1,3 +1,9 @@
-import type { FixturePreview } from './home.page';
+import type { Provider } from '@angular/core';
 
-export const fixturePreview: FixturePreview | undefined = undefined;
+import { APP_OPTIONS, type AppOptions } from './core/app-options';
+
+const options: AppOptions = {
+  scopeIds: { personal: 'personal', work: 'work' },
+};
+
+export const appProviders: Provider[] = [{ provide: APP_OPTIONS, useValue: options }];

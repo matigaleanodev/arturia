@@ -19,7 +19,11 @@ npm ci
 npm start
 ```
 
-Run `npm run start:fixtures` to serve the app with a synthetic conversation example. Angular selects the fixture module through a build-time file replacement.
+Run `npm run start:fixtures` to serve the app with a synthetic conversation example. Angular selects the fixture module through a build-time file replacement. The synthetic session and conversation history run on loopback without a remote API.
+
+## Application configuration
+
+The providers in `src/app/app-environment.ts` supply the HTTPS API origin, OAuth authorization and token endpoints, public client ID, requested scopes, and scope IDs. The OAuth client uses the root URL of the web origin as its registered redirect URI and exchanges an authorization code with PKCE S256.
 
 ## API contract
 

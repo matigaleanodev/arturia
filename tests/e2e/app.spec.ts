@@ -26,6 +26,8 @@ test('app_loads_without_cloud', async ({ page, baseURL }) => {
   await page.goto('/');
 
   await expect(page.getByRole('main').getByRole('heading', { name: 'Arturia' })).toBeVisible();
-  await expect(page.getByText('Conversación de ejemplo')).toBeVisible();
+  await expect(page.getByText('Modo de prueba')).toBeVisible();
+  await page.getByRole('link', { name: 'Personal', exact: true }).click();
+  await expect(page.getByRole('link', { name: 'Conversación de ejemplo' })).toBeVisible();
   expect(unexpectedRequests).toEqual([]);
 });

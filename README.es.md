@@ -19,7 +19,11 @@ npm ci
 npm start
 ```
 
-Ejecutar `npm run start:fixtures` para servir la aplicación con una conversación de ejemplo sintética. Angular selecciona el módulo de fixtures mediante un reemplazo de archivo en la compilación.
+Ejecutar `npm run start:fixtures` para servir la aplicación con una conversación de ejemplo sintética. Angular selecciona el módulo de fixtures mediante un reemplazo de archivo en la compilación. La sesión sintética y el historial funcionan en loopback sin una API remota.
+
+## Configuración de la aplicación
+
+Los providers de `src/app/app-environment.ts` definen el origen HTTPS de la API, los endpoints OAuth de autorización y token, el ID público del cliente, los scopes solicitados y los IDs de ámbito. Registrá la URL raíz del origen web como URI de redirección de OAuth. La aplicación intercambia el código de autorización con PKCE S256.
 
 ## Contrato de API
 

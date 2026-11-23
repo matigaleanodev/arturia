@@ -1,0 +1,108 @@
+<main class="workspace">
+  <header class="workspace-header">
+    <h1>Arturia</h1>
+    <app-scope-switcher [activeScope]="scope()?.key" />
+  </header>
+
+  <aside class="history" aria-labelledby="history-heading">
+    <div class="history-top">
+      <h2 id="history-heading">Conversaciones</h2>
+      <button type="button" (click)="createConversation()" [disabled]="chat.creating()">
+        Nueva conversación
+      </button>
+    </div>
+    @if (chat.historyLoading()) {
+      <p role="status">Cargando historial…</p>
+    } @else if (chat.conversations().length) {
+      <nav aria-label="Historial">
+        <ul>
+          @for (item of chat.conversations(); track item.conversationId) {
+            <li>
+              <a
+                routerLink="/chat"
+                [queryParams]="{ scope: scope()?.key, conversation: item.conversationId }"
+                [attr.aria-current]="item.conversationId === conversationId() ? 'page' : null"
+              >
+                {{ item.title || 'Nueva conversación' }}
+                @if (!item.title) {
+                  <time [attr.datetime]="item.createdAt">{{ createdAtLabel(item.createdAt) }}</time>
+                }
+              </a>
+            </li>
+          }
+        </ul>
+      </nav>
+    } @else {
+      <p>Todavía no hay conversaciones.</p>
+    }
+  </aside>
+
+  <section aria-labelledby="conversation-heading" class="conversation">
+    @if (chat.conversation(); as conversation) {
+      <div class="conversation-top">
+        <h2 id="conversation-heading">{{ conversation.title || 'Nueva conversación' }}</h2>
+        <p>{{ scope()?.label }}</p>
+      </div>
+
+      <div class="messages" aria-label="Mensajes" aria-live="polite">
+        @for (turn of conversation.turns; track turn.snapshot.turnId) {
+          <article>
+            <div class="message user-message">
+              <p class="speaker">Vos</p>
+              <p class="message-text">{{ turn.input.text }}</p>
+            </div>
+            <div class="message assistant-message">
+              <p class="speaker">Arturia</p>
+              <p class="turn-status" [class.is-error]="turn.snapshot.error">
+                {{ statusLabels[turn.snapshot.status] }}
+              </p>
+              @if (turn.snapshot.result; as result) {
+                <p class="message-text">{{ result.text }}</p>
+              }
+              @if (turn.snapshot.error; as error) {
+                <p class="public-error">{{ error.message }}</p>
+              }
+              @if (canCancel(turn.snapshot.status)) {
+                <button
+                  type="button"
+                  [disabled]="chat.cancelling() !== null"
+                  (click)="chat.cancel(turn.snapshot.turnId)"
+                >Cancelar respuesta</button>
+              }
+            </div>
+          </article>
+        } @empty {
+          <p class="empty">Escribí un mensaje para iniciar la conversación.</p>
+        }
+      </div>
+
+      @if (chat.error(); as message) {
+        <p class="notice" role="alert">{{ message }}</p>
+      }
+      <form class="composer" (submit)="submit($event)">
+        <label for="composer-message">Mensaje</label>
+        <textarea
+          id="composer-message"
+          rows="3"
+          [value]="chat.draft()"
+          [readOnly]="chat.pending()"
+          (input)="updateDraft($event)"
+        ></textarea>
+        <button
+          class="primary"
+          type="submit"
+          [disabled]="chat.sending() || chat.hasActiveTurn() || !chat.draft().trim()"
+        >{{ chat.pending() && !chat.sending() ? 'Reintentar envío' : 'Enviar' }}</button>
+      </form>
+    } @else {
+      <h2 id="conversation-heading">Conversaciones del ámbito {{ scope()?.label }}</h2>
+      @if (chat.conversationLoading()) {
+        <p role="status">Cargando conversación…</p>
+      } @else if (chat.error(); as message) {
+        <p class="notice" role="alert">{{ message }}</p>
+      } @else {
+        <p>Abrí una conversación del historial o creá una nueva.</p>
+      }
+    }
+  </section>
+</main>

@@ -4,38 +4,125 @@
   line-height: 1.55;
   color: light-dark(#172921, #f1f7ee);
   background: light-dark(#f4f8ef, #13211b);
+  --paper: light-dark(#fcfdf9, #192b22);
+  --border: light-dark(#bdcabb, #455d4d);
+  --soft: light-dark(#e4eee0, #263e30);
+  --muted: light-dark(#456252, #b1c8b7);
+  --accent: light-dark(#28563f, #b4e1bd);
+  --accent-ink: light-dark(#fff, #11251b);
+  --attention: light-dark(#803810, #ffc598);
 }
 
 body {
   margin: 0;
 }
 
-main {
-  box-sizing: border-box;
-  max-width: 48rem;
-  margin-inline: auto;
-  padding: clamp(2rem, 10vw, 7rem) 1.5rem;
-}
-
-h1 {
-  margin-block: 0 0.5rem;
-  font-size: clamp(2.5rem, 8vw, 4.5rem);
-  line-height: 1.05;
-  letter-spacing: -0.05em;
-}
-
+h1,
+h2,
 p {
   margin-block: 0;
 }
 
-section {
-  margin-block-start: 2rem;
-  padding: 1rem 1.25rem;
-  border: 1px solid light-dark(#6b8674, #718b78);
-  border-radius: 0.75rem;
+h1 {
+  font-size: clamp(2.5rem, 8vw, 4.5rem);
+  line-height: 1.05;
+  letter-spacing: -0.055em;
 }
 
 h2 {
-  margin-block: 0 0.5rem;
   font-size: 1.125rem;
+  line-height: 1.2;
+}
+
+button,
+textarea {
+  font: inherit;
+}
+
+button,
+.scope-switcher a {
+  box-sizing: border-box;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.9rem;
+  color: inherit;
+  background: var(--paper);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  font-weight: 600;
+}
+
+button:enabled {
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.6;
+}
+
+button:enabled:hover,
+.scope-switcher a:hover,
+a[aria-current='page'] {
+  background: var(--soft);
+}
+
+button.primary {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-color: var(--accent);
+}
+
+button.primary:enabled:hover {
+  filter: brightness(0.88);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+a {
+  color: var(--accent);
+}
+
+.home {
+  box-sizing: border-box;
+  max-width: 52rem;
+  margin-inline: auto;
+  padding: clamp(3rem, 12vw, 8rem) 1.5rem;
+}
+
+.home h1 {
+  margin-block-end: 1rem;
+}
+
+.home app-scope-switcher {
+  display: block;
+  margin-block-start: 1.75rem;
+}
+
+.scope-switcher {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.scope-switcher a {
+  text-decoration: none;
+}
+
+.scope-switcher a[aria-current='page'] {
+  border-color: var(--accent);
+}
+
+.notice {
+  margin-block-start: 1rem;
+  color: var(--attention);
+}
+
+.test-mode {
+  padding: 0.4rem 1rem;
+  border-block-end: 1px solid var(--border);
+  color: var(--muted);
+  text-align: center;
+  font-size: 0.875rem;
 }
