@@ -56,8 +56,8 @@
               <p class="turn-status" [class.is-error]="turn.snapshot.error">
                 {{ statusLabels[turn.snapshot.status] }}
               </p>
-              @if (turn.snapshot.result; as result) {
-                <p class="message-text">{{ result.text }}</p>
+              @if (chat.streamText().get(turn.snapshot.turnId) ?? turn.snapshot.result?.text; as text) {
+                <p class="message-text">{{ text }}</p>
               }
               @if (turn.snapshot.error; as error) {
                 <p class="public-error">{{ error.message }}</p>

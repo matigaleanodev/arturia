@@ -8,12 +8,16 @@ import type {
   TurnSnapshot,
   TurnStatus,
 } from '../../core/api/contract/openapi.generated';
+import { ChatStream } from '../../core/api/sse-client';
 
 interface ChatContext {
   readonly scopeId: string;
   readonly conversationId: string | null;
   readonly controller: AbortController;
+  readonly followers: Map<string, AbortController>;
 }
+
+type StreamOutcome = 'poll' | 'wait' | 'terminal';
 
 type NoticeKind = 'history' | 'conversation' | 'create' | 'send' | 'poll' | 'cancel';
 
@@ -21,14 +25,15 @@ function active(status: TurnStatus): boolean {
   return status === 'queued' || status === 'running';
 }
 
-function waitForPoll(signal: AbortSignal): Promise<void> {
+function wait(delay: number, signal: AbortSignal): Promise<void> {
+  if (signal.aborted) return Promise.resolve();
   return new Promise((resolve) => {
     const done = () => {
       clearTimeout(timer);
       signal.removeEventListener('abort', done);
       resolve();
     };
-    const timer = setTimeout(done, 750);
+    const timer = setTimeout(done, delay);
     signal.addEventListener('abort', done, { once: true });
   });
 }
@@ -36,10 +41,12 @@ function waitForPoll(signal: AbortSignal): Promise<void> {
 @Injectable()
 export class ChatStore {
   private readonly api = inject(ChatApi);
+  private readonly stream = inject(ChatStream);
   private context?: ChatContext;
 
   private readonly history = signal<ConversationSummary[]>([]);
   private readonly detail = signal<ConversationDetail | null>(null);
+  private readonly previews = signal<ReadonlyMap<string, string>>(new Map());
   private readonly intent = signal<{ text: string; key: string } | null>(null);
   private readonly notice = signal<{ kind: NoticeKind; text: string } | null>(null);
   private readonly loadingHistory = signal(false);
@@ -48,6 +55,7 @@ export class ChatStore {
   private readonly sendingMessage = signal(false);
   private readonly cancellingTurn = signal<string | null>(null);
 
+  readonly streamText = this.previews.asReadonly();
   readonly conversations = this.history.asReadonly();
   readonly conversation = this.detail.asReadonly();
   readonly pending = computed(() => this.intent() !== null);
@@ -69,10 +77,16 @@ export class ChatStore {
   open(scopeId: string, conversationId: string | null): void {
     this.context?.controller.abort();
 
-    const context = { scopeId, conversationId, controller: new AbortController() };
+    const context: ChatContext = {
+      scopeId,
+      conversationId,
+      controller: new AbortController(),
+      followers: new Map(),
+    };
     this.context = context;
     this.history.set([]);
     this.detail.set(null);
+    this.previews.set(new Map());
     this.draft.set('');
     this.intent.set(null);
     this.notice.set(null);
@@ -134,7 +148,7 @@ export class ChatStore {
       };
       if (!existing) {
         this.detail.update((value) => value && { ...value, turns: [...value.turns, turn] });
-        void this.pollTurn(context, turnId, !active(status));
+        void this.followTurn(context, turnId, !active(status));
       }
       this.draft.set('');
       this.intent.set(null);
@@ -163,7 +177,9 @@ export class ChatStore {
         { scopeId: context.scopeId, turnId },
         context.controller.signal,
       );
-      if (this.isCurrent(context)) this.applySnapshot(context, turnId, result);
+      if (this.isCurrent(context) && this.applySnapshot(context, turnId, result) && !active(result.status)) {
+        context.followers.get(turnId)?.abort();
+      }
     } catch {
       if (this.isCurrent(context)) this.showNotice('cancel', 'No se pudo cancelar la respuesta.');
     } finally {
@@ -199,7 +215,7 @@ export class ChatStore {
       );
       this.detail.set({ ...detail, turns });
       for (const { snapshot } of turns) {
-        if (active(snapshot.status)) void this.pollTurn(context, snapshot.turnId);
+        if (active(snapshot.status)) void this.followTurn(context, snapshot.turnId);
       }
     } catch {
       if (this.isCurrent(context)) {
@@ -210,32 +226,140 @@ export class ChatStore {
     }
   }
 
-  private async pollTurn(
+  private async followTurn(
     context: ChatContext,
     turnId: string,
-    awaitingSnapshot = false,
+    awaitingTerminal = false,
   ): Promise<void> {
-    const signal = context.controller.signal;
-    do {
+    if (context.followers.has(turnId)) return;
+    const controller = new AbortController();
+    context.followers.set(turnId, controller);
+    const signal = AbortSignal.any([context.controller.signal, controller.signal]);
+
+    try {
+      if (!awaitingTerminal) {
+        await this.refreshTurn(context, turnId, signal, false);
+        const snapshot = this.turnSnapshot(turnId);
+        if (signal.aborted || !snapshot || !active(snapshot.status)) return;
+
+        const outcome = await this.streamTurn(context, snapshot, signal);
+        awaitingTerminal = outcome === 'terminal';
+        if (outcome === 'wait') await wait(750, signal);
+      }
+
+      while (!signal.aborted && (awaitingTerminal || this.turnIsActive(turnId))) {
+        if (await this.refreshTurn(context, turnId, signal, awaitingTerminal)) awaitingTerminal = false;
+        if (awaitingTerminal || this.turnIsActive(turnId)) await wait(750, signal);
+      }
+    } finally {
+      context.followers.delete(turnId);
+    }
+  }
+
+  private async streamTurn(
+    context: ChatContext,
+    snapshot: TurnSnapshot,
+    signal: AbortSignal,
+  ): Promise<StreamOutcome> {
+    const { turnId } = snapshot;
+    let text = snapshot.result?.text ?? '';
+    let after = text ? snapshot.lastSeq : 0;
+
+    let consecutiveStalls = 0;
+    while (!signal.aborted) {
+      const connectionStart = after;
       try {
-        const snapshot = await this.api.getTurn({ scopeId: context.scopeId, turnId }, signal);
-        if (!this.isCurrent(context)) return;
-        const applied = this.applySnapshot(context, turnId, snapshot);
-        if (awaitingSnapshot && !applied) throw new Error('Snapshot predates the acknowledgement');
-        awaitingSnapshot = false;
-        this.clearNotice('poll');
-      } catch (error) {
-        if (!this.isCurrent(context)) return;
-        if (error instanceof ChatApiError && [401, 403, 404].includes(error.status)) {
-          this.open(context.scopeId, null);
-          this.showNotice('poll', 'La conversación ya no está disponible en este ámbito.');
-          return;
+        for await (const event of this.stream.connect(context.scopeId, turnId, after, signal)) {
+          if (signal.aborted || !this.isCurrent(context) || !this.turnIsActive(turnId)) return 'poll';
+
+          if (event.type === 'text') {
+            if (event.seq <= after) continue;
+            if (event.seq !== after + 1) break;
+            after = event.seq;
+            text += event.text;
+            this.markRunning(context, turnId);
+            this.setPreview(turnId, text);
+          } else if ('lastSeq' in event) {
+            if (event.lastSeq > after) break;
+            if (event.lastSeq < after || event.status === 'blocked' || event.status === 'failed') {
+              this.setPreview(turnId, '');
+            }
+            return 'terminal';
+          } else if (event.status === 'running') {
+            this.markRunning(context, turnId);
+          }
         }
+      } catch (error) {
+        if (signal.aborted) break;
+        if (error instanceof ChatApiError) {
+          if (error.status === 401) {
+            this.retireConversation(context);
+            return 'poll';
+          }
+          if (error.status === 403 || error.status === 404) {
+            // Streaming and snapshot reads have separate permissions and routes.
+            this.setPreview(turnId, '');
+            return 'poll';
+          }
+          if (error.status === 501 || error.status < 500 && error.status !== 429) return 'wait';
+        }
+      }
+
+      consecutiveStalls = after === connectionStart ? consecutiveStalls + 1 : 0;
+      if (consecutiveStalls >= 3) break;
+      await wait(consecutiveStalls === 2 ? 500 : 250, signal);
+    }
+    return 'poll';
+  }
+
+  private async refreshTurn(
+    context: ChatContext,
+    turnId: string,
+    signal: AbortSignal,
+    awaitingTerminal: boolean,
+  ): Promise<boolean> {
+    try {
+      const snapshot = await this.api.getTurn({ scopeId: context.scopeId, turnId }, signal);
+      if (signal.aborted || !this.isCurrent(context)) return false;
+      if (awaitingTerminal && active(snapshot.status)) {
+        throw new Error('Snapshot predates the terminal status');
+      }
+      if (!this.applySnapshot(context, turnId, snapshot) && awaitingTerminal) {
+        throw new Error('Snapshot predates the terminal status');
+      }
+      this.clearNotice('poll');
+      return true;
+    } catch (error) {
+      if (signal.aborted || !this.isCurrent(context)) return false;
+      if (error instanceof ChatApiError && [401, 403, 404].includes(error.status)) {
+        this.retireConversation(context);
+      } else {
         this.showNotice('poll', 'Se interrumpió la consulta de estado. Volveremos a intentar.');
       }
-      if (!awaitingSnapshot && !this.turnIsActive(turnId)) return;
-      await waitForPoll(signal);
-    } while (this.isCurrent(context) && (awaitingSnapshot || this.turnIsActive(turnId)));
+      return false;
+    }
+  }
+
+  private markRunning(context: ChatContext, turnId: string): void {
+    const snapshot = this.turnSnapshot(turnId);
+    if (snapshot?.status === 'queued') {
+      this.applySnapshot(context, turnId, { ...snapshot, status: 'running' });
+    }
+  }
+
+  private setPreview(turnId: string, text?: string): void {
+    this.previews.update((value) => {
+      if (text === undefined && !value.has(turnId)) return value;
+      const previews = new Map(value);
+      if (text === undefined) previews.delete(turnId);
+      else previews.set(turnId, text);
+      return previews;
+    });
+  }
+
+  private retireConversation(context: ChatContext): void {
+    this.open(context.scopeId, null);
+    this.showNotice('poll', 'La conversación ya no está disponible en este ámbito.');
   }
 
   private applySnapshot(context: ChatContext, turnId: string, next: TurnSnapshot): boolean {
@@ -243,7 +367,7 @@ export class ChatStore {
       next.turnId !== turnId ||
       next.scopeId !== context.scopeId ||
       next.conversationId !== context.conversationId ||
-      !Number.isSafeInteger(next.lastSeq)
+      !Number.isSafeInteger(next.lastSeq) || next.lastSeq < 0
     ) {
       throw new Error('Snapshot does not match its conversation');
     }
@@ -256,7 +380,7 @@ export class ChatStore {
 
     const previous = current.snapshot;
     if (
-      next.lastSeq < previous.lastSeq ||
+      (next.lastSeq < previous.lastSeq && (active(next.status) || !active(previous.status))) ||
       (previous.status === 'running' && next.status === 'queued') ||
       (!active(previous.status) && previous.status !== next.status)
     ) {
@@ -266,13 +390,17 @@ export class ChatStore {
     const turns = detail.turns.slice();
     turns[index] = { ...current, snapshot: next };
     this.detail.set({ ...detail, turns });
+    this.setPreview(turnId);
     return true;
   }
 
+  private turnSnapshot(turnId: string): TurnSnapshot | undefined {
+    return this.detail()?.turns.find(({ snapshot }) => snapshot.turnId === turnId)?.snapshot;
+  }
+
   private turnIsActive(turnId: string): boolean {
-    return this.detail()?.turns.some(({ snapshot }) =>
-      snapshot.turnId === turnId && active(snapshot.status),
-    ) ?? false;
+    const snapshot = this.turnSnapshot(turnId);
+    return !!snapshot && active(snapshot.status);
   }
 
   private isCurrent(context: ChatContext): boolean {

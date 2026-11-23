@@ -71,7 +71,7 @@ function conversation(ref: ConversationRef): string {
   return `${conversations(ref.scopeId)}/${segment(ref.conversationId)}`;
 }
 
-function turn(ref: TurnRef): string {
+export function turnPath(ref: TurnRef): string {
   return `/v1/scopes/${segment(ref.scopeId)}/turns/${segment(ref.turnId)}`;
 }
 
@@ -106,12 +106,12 @@ export class HttpChatApi implements ChatApi {
   }
 
   getTurn(ref: TurnRef, signal: AbortSignal): Promise<TurnSnapshot> {
-    return this.request(turn(ref), signal);
+    return this.request(turnPath(ref), signal);
   }
 
   cancelTurn(ref: TurnRef, signal: AbortSignal): Promise<TurnSnapshot> {
     // Task 06 adds this route to the versioned API contract.
-    return this.request(`${turn(ref)}/cancel`, signal, null);
+    return this.request(`${turnPath(ref)}/cancel`, signal, null);
   }
 
   private async request<T>(
