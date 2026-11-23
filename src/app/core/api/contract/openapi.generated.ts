@@ -5,12 +5,18 @@ export type ClientOptions = {
 };
 
 export type ConversationInput = {
+    /**
+     * Maximum 393216 bytes encoded as UTF-8.
+     */
     title?: string;
 };
 
 export type ConversationSummary = {
     scopeId: string;
     conversationId: string;
+    /**
+     * Maximum 393216 bytes encoded as UTF-8.
+     */
     title?: string;
     createdAt: string;
 };
@@ -22,6 +28,9 @@ export type ConversationList = {
 export type ConversationDetail = {
     scopeId: string;
     conversationId: string;
+    /**
+     * Maximum 393216 bytes encoded as UTF-8.
+     */
     title?: string;
     createdAt: string;
     /**
@@ -36,6 +45,9 @@ export type ConversationTurn = {
 };
 
 export type TurnInput = {
+    /**
+     * Maximum 393216 bytes encoded as UTF-8.
+     */
     text: string;
 };
 
@@ -72,6 +84,9 @@ export type PublicError = {
 export type ListConversationsData = {
     body?: never;
     path: {
+        /**
+         * Maximum 256 bytes encoded as UTF-8.
+         */
         scopeId: string;
     };
     query?: never;
@@ -115,6 +130,9 @@ export type ListConversationsResponse = ListConversationsResponses[keyof ListCon
 export type CreateConversationData = {
     body?: ConversationInput;
     path: {
+        /**
+         * Maximum 256 bytes encoded as UTF-8.
+         */
         scopeId: string;
     };
     query?: never;
@@ -158,7 +176,13 @@ export type CreateConversationResponse = CreateConversationResponses[keyof Creat
 export type GetConversationData = {
     body?: never;
     path: {
+        /**
+         * Maximum 256 bytes encoded as UTF-8.
+         */
         scopeId: string;
+        /**
+         * Maximum 256 bytes encoded as UTF-8.
+         */
         conversationId: string;
     };
     query?: never;
@@ -205,7 +229,13 @@ export type AcceptTurnData = {
         'Idempotency-Key': string;
     };
     path: {
+        /**
+         * Maximum 256 bytes encoded as UTF-8.
+         */
         scopeId: string;
+        /**
+         * Maximum 256 bytes encoded as UTF-8.
+         */
         conversationId: string;
     };
     query?: never;
@@ -253,7 +283,13 @@ export type AcceptTurnResponse = AcceptTurnResponses[keyof AcceptTurnResponses];
 export type GetTurnData = {
     body?: never;
     path: {
+        /**
+         * Maximum 256 bytes encoded as UTF-8.
+         */
         scopeId: string;
+        /**
+         * Maximum 256 bytes encoded as UTF-8.
+         */
         turnId: string;
     };
     query?: never;
@@ -297,7 +333,13 @@ export type GetTurnResponse = GetTurnResponses[keyof GetTurnResponses];
 export type StreamTurnEventsData = {
     body?: never;
     path: {
+        /**
+         * Maximum 256 bytes encoded as UTF-8.
+         */
         scopeId: string;
+        /**
+         * Maximum 256 bytes encoded as UTF-8.
+         */
         turnId: string;
     };
     query?: {
@@ -342,3 +384,53 @@ export type StreamTurnEventsResponses = {
 };
 
 export type StreamTurnEventsResponse = StreamTurnEventsResponses[keyof StreamTurnEventsResponses];
+
+export type CancelTurnData = {
+    body?: never;
+    path: {
+        /**
+         * Maximum 256 bytes encoded as UTF-8.
+         */
+        scopeId: string;
+        /**
+         * Maximum 256 bytes encoded as UTF-8.
+         */
+        turnId: string;
+    };
+    query?: never;
+    url: '/v1/scopes/{scopeId}/turns/{turnId}/cancel';
+};
+
+export type CancelTurnErrors = {
+    /**
+     * The request is invalid.
+     */
+    400: PublicError;
+    /**
+     * A current access token is required.
+     */
+    401: PublicError;
+    /**
+     * The current authorization does not permit this operation.
+     */
+    403: PublicError;
+    /**
+     * The resource was not found in the authorized scope.
+     */
+    404: PublicError;
+    /**
+     * The request failed.
+     */
+    default: PublicError;
+};
+
+export type CancelTurnError = CancelTurnErrors[keyof CancelTurnErrors];
+
+export type CancelTurnResponses = {
+    /**
+     * Current authorized turn snapshot.
+     */
+    200: TurnSnapshot;
+};
+
+export type CancelTurnResponse = CancelTurnResponses[keyof CancelTurnResponses];
