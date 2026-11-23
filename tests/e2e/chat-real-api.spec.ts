@@ -61,13 +61,15 @@ test('accepted_turn_finishes_after_tab_close', async ({ page, request }) => {
 test('restored_conversation_has_one_answer', async ({ page, context, request }) => {
   const { turnId, conversationId, url } = await accept(page);
   await page.close();
-  await release(turnId);
   const reopened = await context.newPage();
   const detail = reopened.waitForResponse(r => r.url() ===
     api + '/v1/scopes/' + personal + '/conversations/' + conversationId);
   await reopened.goto(url);
   const history = await (await detail).json() as ConversationDetail;
   expect(history.turns.map(t => t.snapshot.turnId)).toEqual([turnId]);
+  expect(['queued', 'running']).toContain(history.turns[0]?.snapshot.status);
+  await expect(reopened.getByRole('button', { name: 'Cancelar respuesta' })).toBeVisible();
+  await release(turnId);
   await expect(reopened.getByText('Respuesta completa', { exact: true })).toBeVisible();
   await expect(reopened.getByRole('article')).toHaveCount(1);
   await expect(reopened.getByText(answer, { exact: true })).toHaveCount(1);
