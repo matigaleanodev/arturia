@@ -11,7 +11,7 @@
   "scripts": {
     "start": "ng serve",
     "start:fixtures": "ng serve --configuration fixtures",
-    "build": "ng build --configuration production",
+    "build": "ng build --configuration production --stats-json && node scripts/check-production.mjs",
     "contract:generate": "node scripts/generate-contract.mjs",
     "contract:check": "node scripts/check-contract.mjs && node scripts/generate-contract.mjs --check",
     "test:contract": "node --test scripts/check-contract.test.mjs",

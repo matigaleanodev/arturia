@@ -29,6 +29,14 @@
               "extractLicenses": false,
               "sourceMap": true
             },
+            "integrated": {
+              "fileReplacements": [
+                {
+                  "replace": "src/app/app-environment.ts",
+                  "with": "src/app/testing/app-environment.integrated.ts"
+                }
+              ]
+            },
             "fixtures": {
               "optimization": false,
               "extractLicenses": false,
@@ -47,6 +55,7 @@
           "builder": "@angular/build:dev-server",
           "configurations": {
             "development": { "buildTarget": "arturia:build:development" },
+            "integrated": { "buildTarget": "arturia:build:development,integrated" },
             "fixtures": { "buildTarget": "arturia:build:fixtures" }
           },
           "defaultConfiguration": "development"
