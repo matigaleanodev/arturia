@@ -15,7 +15,8 @@
             "browser": "src/main.ts",
             "tsConfig": "tsconfig.app.json",
             "index": "src/index.html",
-            "styles": ["src/styles.css"]
+            "styles": ["src/styles.css"],
+            "scripts": [{ "input": "src/theme-startup.js", "bundleName": "theme-startup" }]
           },
           "configurations": {
             "production": {

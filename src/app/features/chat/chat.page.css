@@ -1,189 +1,281 @@
-.workspace {
-  display: grid;
-  grid-template-columns: minmax(14rem, 19rem) minmax(0, 1fr);
-  gap: clamp(1rem, 4vw, 3rem);
-  max-width: 76rem;
-  margin-inline: auto;
-  padding: 1.5rem clamp(1rem, 4vw, 2.75rem) 3rem;
-}
-
-.workspace-header {
-  grid-column: 1 / -1;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  padding-block-end: 1.25rem;
-  border-block-end: 1px solid var(--border);
-}
-
-.workspace-header h1 {
-  font-size: clamp(2rem, 5vw, 3.5rem);
-}
-
-.history {
-  padding-inline-end: clamp(0.75rem, 3vw, 2rem);
-  border-inline-end: 1px solid var(--border);
-}
-
-.history-top {
-  display: grid;
-  justify-items: start;
-  gap: 0.75rem;
-  margin-block-end: 1rem;
-}
-
-.history ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.history li + li {
-  margin-block-start: 0.25rem;
-}
-
-.history a {
-  display: block;
-  padding: 0.55rem 0.75rem;
-  border-radius: 0.4rem;
-  overflow-wrap: anywhere;
-}
-
-.history time {
-  display: block;
-  color: var(--muted);
-  font-size: 0.875rem;
-}
-
-.conversation {
-  min-width: 0;
-}
-
-.conversation h2 {
-  font-size: clamp(1.35rem, 3vw, 1.85rem);
-  letter-spacing: -0.03em;
-  overflow-wrap: anywhere;
-}
-
-.conversation > p {
-  margin-block-start: 0.6rem;
-}
-
-.conversation-top {
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 0.4rem 1rem;
-}
-
-.conversation-top p,
-.history > p,
-.empty {
-  color: var(--muted);
-}
-
-.messages {
-  display: grid;
-  gap: 1.75rem;
-  margin-block-start: 1.5rem;
-}
-
-.message {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
-.user-message {
-  width: fit-content;
-  max-width: 90%;
-  box-sizing: border-box;
-  margin-inline-start: auto;
-  padding: 0.75rem 1rem;
-  border-radius: 0.65rem 0.65rem 0.1rem 0.65rem;
-  background: var(--soft);
-}
-
-.assistant-message {
-  margin-block-start: 0.85rem;
-  padding: 0.85rem 0.95rem;
-  border-inline-start: 2px solid var(--accent);
-}
-
-.speaker {
-  color: var(--accent);
-  font-size: 0.875rem;
-  font-weight: 650;
-}
-
-.message-text {
-  margin-block-start: 0.25rem;
-  white-space: pre-wrap;
-}
-
-.turn-status {
-  color: var(--muted);
-  font-size: 0.875rem;
-}
-
-.is-error,
-.public-error {
-  color: var(--attention);
-}
-
-.assistant-message button {
-  margin-block-start: 0.65rem;
-}
-
-.composer {
-  display: grid;
-  gap: 0.6rem;
-  margin-block-start: 1.75rem;
-  padding-block-start: 1rem;
-  border-block-start: 1px solid var(--border);
-}
-
-.composer label {
-  font-weight: 650;
-}
-
-.composer textarea {
-  appearance: none;
-  box-sizing: border-box;
-  width: 100%;
-  min-height: 5.5rem;
-  padding: 0.65rem 0.75rem;
-  color: inherit;
-  background: var(--paper);
-  border: 1px solid var(--border);
-  border-radius: 0.5rem;
-  resize: vertical;
-}
-
-.composer button {
-  justify-self: end;
-}
-
-@media (max-width: 44rem) {
-  .workspace {
-    grid-template-columns: minmax(0, 1fr);
+@layer components {
+  app-root:has(.workspace) {
+    display: flex;
+    flex-direction: column;
+    min-block-size: 100dvh;
   }
+
+  app-chat { display: grid; flex: 1; }
+
+  .workspace {
+    display: grid;
+    grid-template: auto 1fr / clamp(15rem, 22vw, 19rem) minmax(0, 1fr);
+  }
+
+  .workspace-header {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem 1.25rem;
+    padding: 0.7rem var(--gutter);
+    border-block-end: 1px solid var(--border-muted);
+    background: var(--surface-panel);
+  }
+
+  .workspace-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .brand h1 {
+    font-size: 1.65rem;
+    line-height: 1;
+    letter-spacing: -0.045em;
+  }
+
+  .history-toggle.button { display: none; }
 
   .history {
-    padding: 0 0 1rem;
-    border-inline-end: 0;
-    border-block-end: 1px solid var(--border);
+    padding: 1.5rem clamp(0.8rem, 2vw, 1.4rem);
+    border-inline-end: 1px solid var(--border-muted);
+    overflow-wrap: anywhere;
   }
 
-  .history-top {
-    grid-template-columns: 1fr auto;
+  .history-top { margin-block-end: 0.8rem; }
+  .history > p { color: var(--text-secondary); font-size: 0.875rem; }
+  .button.button-new { justify-content: start; color: var(--action-text); }
+  .button-new span { font-size: 1.15rem; line-height: 1; }
+
+  .history a {
+    display: block;
+    min-block-size: 2.75rem;
+    padding: 0.65rem 0.65rem;
+    border: 1px solid transparent;
+    border-inline-start-width: 3px;
+    border-radius: var(--shape-control);
+    color: var(--text-main);
+    font-size: 0.875rem;
+    text-decoration: none;
+    transition: background-color var(--motion-time) var(--motion-easing);
+  }
+
+  .history a:hover { background: var(--state-hover); }
+
+  .history a[aria-current='page'] {
+    color: var(--action-text);
+    background: var(--state-selected);
+    border-inline-start-color: var(--action-text);
+    font-weight: 650;
+  }
+
+  .history time {
+    display: block;
+    color: var(--text-secondary);
+    font-size: 0.8125rem;
+  }
+
+  .conversation {
+    display: flex;
+    min-inline-size: 0;
+    flex-direction: column;
+    overflow-wrap: anywhere;
+  }
+
+  .reading-width {
+    inline-size: min(100% - var(--gutter) * 2, var(--measure));
+    margin-inline: auto;
+  }
+
+  .conversation-top {
+    display: grid;
+    gap: 0.35rem;
+    padding-block: 1.45rem 1rem;
+    border-block-end: 1px solid var(--border-muted);
+  }
+
+  .conversation-top h2 {
+    font-size: clamp(1.25rem, 3vw, 1.65rem);
+    font-weight: 650;
+    line-height: 1.2;
+    letter-spacing: -0.032em;
+  }
+
+  .conversation-top p {
+    color: var(--text-secondary);
+    font-size: 0.8125rem;
+  }
+
+  .messages {
+    display: grid;
+    align-content: start;
+    flex: 1;
+    gap: 1.75rem;
+    padding-block: 1.75rem 1.25rem;
+  }
+
+  .turn + .turn {
+    border-block-start: 1px solid var(--border-muted);
+    padding-block-start: 1.75rem;
+  }
+
+  .message {
+    min-inline-size: 0;
+  }
+
+  .user-message {
+    inline-size: fit-content;
+    max-inline-size: min(90%, 65ch);
+    margin-inline-start: auto;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--border-muted);
+    border-radius: var(--shape-panel) var(--shape-panel) 0.35rem var(--shape-panel);
+    background: var(--surface-elevated);
+  }
+
+  .assistant-message {
+    max-inline-size: 74ch;
+    padding-block-end: 0.25rem;
+  }
+
+  .speaker {
+    color: var(--text-main);
+    font-size: 0.875rem;
+    font-weight: 700;
+  }
+
+  .assistant-speaker {
+    display: flex;
     align-items: center;
+    gap: 0.65rem;
   }
-}
 
-@media (max-width: 24rem) {
-  .history-top {
-    grid-template-columns: 1fr;
+  .reply-mark {
+    display: inline-block;
+    inline-size: 0.55rem;
+    block-size: 0.55rem;
+    margin-inline: 0.14rem;
+    border: 1px solid var(--action-text);
+    background: var(--state-selected);
+    transform: rotate(45deg);
+  }
+
+  .message-text {
+    margin-block-start: 0.4rem;
+    line-height: 1.68;
+    white-space: pre-wrap;
+  }
+
+  .turn-status {
+    margin-block-start: 0.2rem;
+    color: var(--text-secondary);
+    font-size: 0.8125rem;
+  }
+
+  .turn-status.is-error, .public-error { color: var(--status-error); }
+  .public-error { margin-block-start: 0.45rem; }
+  .assistant-message .button { margin-block-start: 0.65rem; }
+
+  .empty-thread { min-block-size: 28dvh; }
+  .empty-thread .font-display { font-size: clamp(1.7rem, 5vw, 2.25rem); }
+
+  .no-conversation {
+    flex: 1;
+    min-block-size: 55dvh;
+    padding-block: 2rem;
+  }
+
+  .no-conversation h2 {
+    max-inline-size: 20ch;
+    font-size: clamp(1.8rem, 5vw, 2.75rem);
+    line-height: 1.15;
+  }
+
+  .composer-dock {
+    position: sticky;
+    inset-block-end: 0;
+    background: var(--surface-canvas);
+    padding-block: 0.45rem max(1rem, env(safe-area-inset-bottom));
+  }
+
+  .composer {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+    gap: 0.55rem 0.75rem;
+    padding: 0.75rem;
+    border: 1px solid var(--border-control);
+    border-radius: var(--shape-panel);
+    background: var(--surface-panel);
+    box-shadow: var(--depth-panel);
+  }
+
+  .composer label {
+    grid-column: 1 / -1;
+    font-size: 0.8125rem;
+    font-weight: 700;
+  }
+
+  .composer textarea {
+    inline-size: 100%;
+    min-block-size: 3.4rem;
+    max-block-size: min(25dvh, 12rem);
+    padding: 0.5rem 0.6rem;
+    border: 1px solid var(--border-control);
+    border-radius: var(--shape-control);
+    background: var(--surface-canvas);
+    font-size: 1rem;
+    line-height: 1.45;
+    resize: vertical;
+  }
+
+  .composer textarea[readonly] { background: var(--surface-elevated); }
+  .composer-error { margin-block-end: 0.6rem; }
+
+  @media (max-width: 52rem) {
+    .workspace { grid-template: auto auto 1fr / minmax(0, 1fr); }
+    .workspace-header { justify-content: start; }
+    .workspace-actions { margin-inline-start: auto; }
+    .history-toggle.button { display: inline-flex; }
+    .history {
+      display: none;
+      max-block-size: 40dvh;
+      padding: 1rem var(--gutter);
+      border-inline-end: 0;
+      border-block-end: 1px solid var(--border-muted);
+      overflow-y: auto;
+      scroll-padding-block: 0.5rem;
+    }
+
+    .history.history-open { display: block; }
+    .conversation { grid-row: 3; }
+  }
+
+  @media (max-width: 34rem) {
+    .workspace-header {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      column-gap: 0.5rem;
+    }
+
+    .brand { grid-area: 1 / 1; }
+    .workspace-actions { display: contents; }
+    .workspace-actions app-scope-switcher { grid-row: 2; grid-column: 1 / 3; }
+    .workspace-actions .scope-switcher a { padding-inline: 0.65rem; }
+    .workspace-actions app-theme-select { grid-row: 1; grid-column: 2 / -1; justify-self: end; }
+    .history-toggle.button { grid-row: 2; grid-column: 3; }
+    .conversation-top { padding-block-start: 1rem; }
+    .messages { padding-block-start: 1.25rem; }
+    .composer-dock { padding-block-end: max(0.65rem, env(safe-area-inset-bottom)); }
+  }
+
+  /* Keep keyboard focus above the dock when it scrolls into view. */
+  html:has(.composer) { scroll-padding-block-end: 13rem; }
+
+  @media (max-height: 32rem) {
+    .composer-dock { position: static; }
   }
 }

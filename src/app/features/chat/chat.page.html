@@ -1,14 +1,35 @@
 <main class="workspace">
   <header class="workspace-header">
-    <h1>Arturia</h1>
-    <app-scope-switcher [activeScope]="scope()?.key" />
+    <div class="brand flex items-center gap-3">
+      <span class="crest" aria-hidden="true"></span>
+      <h1 class="font-display">Arturia</h1>
+    </div>
+    <div class="workspace-actions">
+      <app-theme-select />
+      <app-scope-switcher [activeScope]="scope()?.key" (click)="closeHistory()" />
+    </div>
+    <button
+      #historyToggle
+      class="history-toggle button"
+      type="button"
+      aria-controls="conversation-history"
+      [attr.aria-expanded]="historyOpen()"
+      (click)="toggleHistory()"
+      (keydown.escape)="closeHistory(historyToggle)"
+    >Historial</button>
   </header>
 
-  <aside class="history" aria-labelledby="history-heading">
-    <div class="history-top">
-      <h2 id="history-heading">Conversaciones</h2>
-      <button type="button" (click)="createConversation()" [disabled]="chat.creating()">
-        Nueva conversación
+  <aside
+    id="conversation-history"
+    class="history bg-rail"
+    aria-labelledby="history-heading"
+    [class.history-open]="historyOpen()"
+    (keydown.escape)="closeHistory(historyToggle)"
+  >
+    <div class="history-top grid gap-4">
+      <h2 id="history-heading" class="text-sm font-semibold text-subtle">Conversaciones</h2>
+      <button class="button button-new" type="button" (click)="createConversation(historyToggle)" [disabled]="chat.creating()">
+        <span aria-hidden="true">+</span> Nueva conversación
       </button>
     </div>
     @if (chat.historyLoading()) {
@@ -22,6 +43,7 @@
                 routerLink="/chat"
                 [queryParams]="{ scope: scope()?.key, conversation: item.conversationId }"
                 [attr.aria-current]="item.conversationId === conversationId() ? 'page' : null"
+                (click)="closeHistory(historyToggle)"
               >
                 {{ item.title || 'Nueva conversación' }}
                 @if (!item.title) {
@@ -39,31 +61,34 @@
 
   <section aria-labelledby="conversation-heading" class="conversation">
     @if (chat.conversation(); as conversation) {
-      <div class="conversation-top">
+      <div class="conversation-top reading-width">
         <h2 id="conversation-heading">{{ conversation.title || 'Nueva conversación' }}</h2>
         <p>{{ scope()?.label }}</p>
       </div>
 
-      <div class="messages" aria-label="Mensajes" aria-live="polite">
+      <div class="messages reading-width" role="region" aria-label="Mensajes">
         @for (turn of conversation.turns; track turn.snapshot.turnId) {
-          <article>
+          <article class="turn grid gap-6">
             <div class="message user-message">
               <p class="speaker">Vos</p>
               <p class="message-text">{{ turn.input.text }}</p>
             </div>
             <div class="message assistant-message">
-              <p class="speaker">Arturia</p>
-              <p class="turn-status" [class.is-error]="turn.snapshot.error">
+              <p class="speaker assistant-speaker"><span class="reply-mark" aria-hidden="true"></span> Arturia</p>
+              <p class="turn-status" [class.is-error]="turn.snapshot.error" role="status">
                 {{ statusLabels[turn.snapshot.status] }}
               </p>
-              @if (chat.streamText().get(turn.snapshot.turnId) ?? turn.snapshot.result?.text; as text) {
-                <p class="message-text">{{ text }}</p>
-              }
-              @if (turn.snapshot.error; as error) {
-                <p class="public-error">{{ error.message }}</p>
-              }
+              <div aria-live="polite" aria-atomic="true" [attr.aria-busy]="canCancel(turn.snapshot.status)">
+                @if (chat.streamText().get(turn.snapshot.turnId) ?? turn.snapshot.result?.text; as text) {
+                  <p class="message-text">{{ text }}</p>
+                }
+                @if (turn.snapshot.error; as error) {
+                  <p class="public-error">{{ error.message }}</p>
+                }
+              </div>
               @if (canCancel(turn.snapshot.status)) {
                 <button
+                  class="button"
                   type="button"
                   [disabled]="chat.cancelling() !== null"
                   (click)="chat.cancel(turn.snapshot.turnId)"
@@ -72,37 +97,47 @@
             </div>
           </article>
         } @empty {
-          <p class="empty">Escribí un mensaje para iniciar la conversación.</p>
+          <div class="empty-thread grid content-center gap-2">
+            <p class="font-display">Empezá por un mensaje</p>
+            <p class="text-subtle">Escribí abajo para iniciar la conversación.</p>
+          </div>
         }
       </div>
 
-      @if (chat.error(); as message) {
-        <p class="notice" role="alert">{{ message }}</p>
-      }
-      <form class="composer" (submit)="submit($event)">
-        <label for="composer-message">Mensaje</label>
-        <textarea
-          id="composer-message"
-          rows="3"
-          [value]="chat.draft()"
-          [readOnly]="chat.pending()"
-          (input)="updateDraft($event)"
-        ></textarea>
-        <button
-          class="primary"
-          type="submit"
-          [disabled]="chat.sending() || chat.hasActiveTurn() || !chat.draft().trim()"
-        >{{ chat.pending() && !chat.sending() ? 'Reintentar envío' : 'Enviar' }}</button>
-      </form>
+      <div class="composer-dock">
+        <div class="reading-width">
+          @if (chat.error(); as message) {
+            <p class="notice composer-error" role="alert">{{ message }}</p>
+          }
+          <form class="composer" (submit)="submit($event)">
+            <label for="composer-message">Mensaje</label>
+            <textarea
+              id="composer-message"
+              rows="3"
+              [value]="chat.draft()"
+              [readOnly]="chat.pending()"
+              (input)="updateDraft($event)"
+            ></textarea>
+            <button
+              class="button button-primary"
+              type="submit"
+              [disabled]="chat.sending() || chat.hasActiveTurn() || !chat.draft().trim()"
+            >{{ chat.pending() && !chat.sending() ? 'Reintentar envío' : 'Enviar' }}</button>
+          </form>
+        </div>
+      </div>
     } @else {
-      <h2 id="conversation-heading">Conversaciones del ámbito {{ scope()?.label }}</h2>
-      @if (chat.conversationLoading()) {
-        <p role="status">Cargando conversación…</p>
-      } @else if (chat.error(); as message) {
-        <p class="notice" role="alert">{{ message }}</p>
-      } @else {
-        <p>Abrí una conversación del historial o creá una nueva.</p>
-      }
+      <div class="no-conversation reading-width grid content-center gap-3">
+        <span class="crest crest-large" aria-hidden="true"></span>
+        <h2 id="conversation-heading" class="font-display">Conversaciones del ámbito {{ scope()?.label }}</h2>
+        @if (chat.conversationLoading()) {
+          <p role="status">Cargando conversación…</p>
+        } @else if (chat.error(); as message) {
+          <p class="notice" role="alert">{{ message }}</p>
+        } @else {
+          <p class="text-subtle">Abrí una conversación del historial o creá una nueva.</p>
+        }
+      </div>
     }
   </section>
 </main>

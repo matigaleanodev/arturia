@@ -17,6 +17,7 @@ function configFor(origin: string, login: string, clientId: string) {
 }
 
 async function serveBuild(page: Page, origin: string, config: (route: Route) => Promise<void>) {
+  const csp = "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; base-uri 'self'";
   const requests: string[] = [];
   const authorizations: URL[] = [];
   await page.route('**/*', async (route) => {
@@ -35,7 +36,7 @@ async function serveBuild(page: Page, origin: string, config: (route: Route) => 
     const file = join(dist, url.pathname);
     return url.pathname !== '/' && existsSync(file) && statSync(file).isFile()
       ? route.fulfill({ path: file })
-      : route.fulfill({ path: join(dist, 'index.html'), contentType: 'text/html' });
+      : route.fulfill({ path: join(dist, 'index.html'), contentType: 'text/html', headers: { 'content-security-policy': csp } });
   });
   return { requests, authorizations };
 }
@@ -62,6 +63,38 @@ test.describe('production build', () => {
   test.beforeAll(() => {
     if (!existsSync(join(dist, 'index.html'))) throw new Error('Run npm run build before this suite');
     expect(existsSync(join(dist, 'config.json')), 'The build must not ship a configuration').toBe(false);
+  });
+
+  test('applies a stored theme before runtime configuration under the hosting CSP', async ({ page }) => {
+    const origin = 'https://web-a.arturia.test';
+    const violations: string[] = [];
+    await page.exposeFunction('reportCspViolation', (directive: string) => violations.push(directive));
+    await page.addInitScript(() => {
+      localStorage.setItem('arturia.theme', 'dark');
+      addEventListener('securitypolicyviolation', (event) => {
+        const report = Reflect.get(window, 'reportCspViolation') as (directive: string) => void;
+        report(event.effectiveDirective);
+      });
+    });
+    await page.emulateMedia({ colorScheme: 'light' });
+    let releaseConfig!: () => void;
+    const configuration = new Promise<void>(resolve => { releaseConfig = resolve; });
+    await serveBuild(page, origin, async (route) => {
+      await configuration;
+      await route.fulfill({ json: configFor(origin, 'https://login.arturia.test', 'clientA') });
+    });
+
+    try {
+      await page.goto(`${origin}/`, { waitUntil: 'domcontentloaded' });
+      await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+      await expect(page.locator('html')).toHaveCSS('color-scheme', 'dark');
+      await expect(page.getByRole('main')).toHaveCount(0);
+    } finally {
+      releaseConfig();
+    }
+    await expect(page.getByRole('button', { name: 'Iniciar sesión' })).toBeVisible();
+    await expect(page.getByRole('combobox', { name: 'Tema' })).toHaveValue('dark');
+    expect(violations).toEqual([]);
   });
 
   test('missing_runtime_config_disables_login_with_visible_error', async ({ page }) => {

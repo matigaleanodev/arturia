@@ -1,10 +1,11 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import { APP_OPTIONS } from '../../core/app-options';
 import type { TurnStatus } from '../../core/api/contract/openapi.generated';
 import { AuthSession } from '../../core/auth/auth-session';
+import { ThemeSelect } from '../../core/theme/theme-select';
 import { findScope, ScopeSwitcher } from '../scopes/scope-switcher';
 import { ChatStore } from './chat.store';
 
@@ -22,11 +23,10 @@ const statusLabels: Record<TurnStatus, string> = {
 
 @Component({
   selector: 'app-chat',
-  imports: [RouterLink, ScopeSwitcher],
+  imports: [RouterLink, ScopeSwitcher, ThemeSelect],
   providers: [ChatStore],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './chat.page.html',
-  styleUrl: './chat.page.css',
 })
 export class ChatPage {
   private readonly router = inject(Router);
@@ -37,6 +37,7 @@ export class ChatPage {
     initialValue: this.route.snapshot.queryParamMap,
   });
   protected readonly chat = inject(ChatStore);
+  protected readonly historyOpen = signal(false);
   protected readonly statusLabels = statusLabels;
   protected readonly scope = computed(() => findScope(this.params().get('scope')));
   protected readonly conversationId = computed(() => this.params().get('conversation') || null);
@@ -53,13 +54,24 @@ export class ChatPage {
     });
   }
 
-  protected async createConversation(): Promise<void> {
+  protected toggleHistory(): void {
+    this.historyOpen.update(open => !open);
+  }
+
+  protected closeHistory(toggle?: HTMLButtonElement): void {
+    if (!this.historyOpen()) return;
+    this.historyOpen.set(false);
+    if (toggle?.getClientRects().length) toggle.focus();
+  }
+
+  protected async createConversation(toggle: HTMLButtonElement): Promise<void> {
     const scope = this.scope();
     const created = await this.chat.createConversation();
     if (scope && created && this.scope() === scope) {
       await this.router.navigate(['/chat'], {
         queryParams: { scope: scope.key, conversation: created.conversationId },
       });
+      this.closeHistory(toggle);
     }
   }
 

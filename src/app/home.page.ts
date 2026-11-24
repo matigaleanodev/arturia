@@ -4,6 +4,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { APP_OPTIONS } from './core/app-options';
 import { AuthSession } from './core/auth/auth-session';
 import type { RuntimeConfigError } from './core/runtime-config';
+import { ThemeSelect } from './core/theme/theme-select';
 import { ScopeSwitcher } from './features/scopes/scope-switcher';
 
 const configErrors: Record<RuntimeConfigError, string> = {
@@ -14,26 +15,35 @@ const configErrors: Record<RuntimeConfigError, string> = {
 
 @Component({
   selector: 'app-home',
-  imports: [ScopeSwitcher],
+  imports: [ScopeSwitcher, ThemeSelect],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
+    <header class="home-tools flex justify-end"><app-theme-select /></header>
     <main class="home">
-      <h1>Arturia</h1>
-      @if (busy()) {
-        <p role="status">Iniciando sesión…</p>
-      } @else if (auth.accessToken()) {
-        <p>Elegí un ámbito para abrir su historial.</p>
-        <app-scope-switcher />
-      } @else if (auth.signInAvailable) {
-        <button class="primary" type="button" (click)="signIn()">Iniciar sesión</button>
-      } @else if (configError) {
-        <p class="notice" role="alert">{{ configError }} El inicio de sesión está deshabilitado.</p>
-      } @else {
-        <p>El inicio de sesión todavía no está configurado.</p>
-      }
-      @if (error()) {
-        <p class="notice" role="alert">{{ error() }}</p>
-      }
+      <div class="home-panel grid justify-items-start gap-5">
+        <span class="crest crest-large" aria-hidden="true"></span>
+        <div class="grid gap-2">
+          <h1 class="home-title font-display">Arturia</h1>
+          <p class="text-subtle">Asistente personal</p>
+        </div>
+        <div class="grid justify-items-start gap-3">
+          @if (busy()) {
+            <p role="status">Iniciando sesión…</p>
+          } @else if (auth.accessToken()) {
+            <p>Elegí un ámbito para abrir su historial.</p>
+            <app-scope-switcher />
+          } @else if (auth.signInAvailable) {
+            <button class="button button-primary" type="button" (click)="signIn()">Iniciar sesión</button>
+          } @else if (configError) {
+            <p class="notice" role="alert">{{ configError }} El inicio de sesión está deshabilitado.</p>
+          } @else {
+            <p>El inicio de sesión todavía no está configurado.</p>
+          }
+          @if (error()) {
+            <p class="notice" role="alert">{{ error() }}</p>
+          }
+        </div>
+      </div>
     </main>
   `,
 })
