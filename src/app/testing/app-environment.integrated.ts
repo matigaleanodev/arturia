@@ -1,6 +1,6 @@
 import { type Provider, signal } from '@angular/core';
 
-import { CHAT_API_ORIGIN } from '../core/api/chat-api';
+import { CHAT_API_BASE_URL } from '../core/api/chat-api';
 import { APP_OPTIONS, type AppOptions } from '../core/app-options';
 import { AuthSession } from '../core/auth/auth-session';
 
@@ -25,8 +25,12 @@ const session: AuthSession = {
   clear() { token.set(null); },
 };
 
-export const appProviders: Provider[] = [
+const providers: Provider[] = [
   { provide: APP_OPTIONS, useValue: options },
   { provide: AuthSession, useValue: session },
-  { provide: CHAT_API_ORIGIN, useValue: INTEGRATED_API_ORIGIN },
+  { provide: CHAT_API_BASE_URL, useValue: `${INTEGRATED_API_ORIGIN}/` },
 ];
+
+export async function appEnvironment(): Promise<Provider[]> {
+  return providers;
+}

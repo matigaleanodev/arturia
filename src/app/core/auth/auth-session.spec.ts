@@ -8,14 +8,17 @@ const testOrigin = 'https://arturia.example';
 const oauth = {
   authorizationEndpoint: 'https://identity.example/oauth2/authorize',
   tokenEndpoint: 'https://identity.example/oauth2/token',
+  logoutEndpoint: 'https://identity.example/logout',
   clientId: 'public-client',
   scopes: ['openid', 'arturia/access'],
+  redirectUri: 'https://arturia.example/',
+  logoutUri: 'https://arturia.example/',
 };
 
-function makeAuth() {
+function makeAuth(options: Partial<typeof oauth> = {}) {
   vi.stubGlobal('location', new URL(testOrigin));
   TestBed.configureTestingModule({
-    providers: [{ provide: APP_OPTIONS, useValue: { oauth } }],
+    providers: [{ provide: APP_OPTIONS, useValue: { oauth: { ...oauth, ...options } } }],
   });
   return TestBed.inject(AuthSession);
 }
@@ -80,5 +83,25 @@ it('consumes a mismatched state without exchanging a token', async () => {
   await expect(auth.complete(new URLSearchParams({ code: 'code', state: 'wrong' }))).rejects.toThrow();
   await expect(auth.complete(new URLSearchParams({ code: 'code', state }))).rejects.toThrow();
   expect(fetchToken).not.toHaveBeenCalled();
+  expect(auth.accessToken()).toBeNull();
+});
+
+it('disables sign-in when the configured redirect is not the current origin root', async () => {
+  for (const redirectUri of ['https://other.example/', 'https://arturia.example/callback']) {
+    const auth = makeAuth({ redirectUri });
+    expect(auth.signInAvailable).toBe(false);
+    await expect(auth.begin()).rejects.toThrow();
+    TestBed.resetTestingModule();
+  }
+});
+
+it('ignores a stored session when sign-in is not configured', () => {
+  sessionStorage.setItem('arturia.oauth.session', JSON.stringify({ token: 'stale', expiresAt: Date.now() + 60_000 }));
+  vi.stubGlobal('location', new URL(testOrigin));
+  TestBed.configureTestingModule({
+    providers: [{ provide: APP_OPTIONS, useValue: { scopeIds: {}, configError: 'missing' } }],
+  });
+  const auth = TestBed.inject(AuthSession);
+  expect(auth.signInAvailable).toBe(false);
   expect(auth.accessToken()).toBeNull();
 });

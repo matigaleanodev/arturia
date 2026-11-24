@@ -23,7 +23,29 @@ Run `npm run start:fixtures` to serve the app with a synthetic conversation exam
 
 ## Application configuration
 
-The providers in `src/app/app-environment.ts` supply the HTTPS API origin, OAuth authorization and token endpoints, public client ID, requested scopes, and scope IDs. The OAuth client uses the root URL of the web origin as its registered redirect URI and exchanges an authorization code with PKCE S256.
+The production build carries no environment values. Before bootstrapping, the app requests `/config.json` from its own origin with `cache: 'no-store'`, without credentials or redirects, and validates it. The same build can be published with a different file per deployment.
+
+```json
+{
+  "version": 1,
+  "apiBaseUrl": "https://<rest-api-id>.execute-api.<region>.amazonaws.com/<stage>/",
+  "cognito": {
+    "domain": "https://<prefix>.auth.<region>.amazoncognito.com",
+    "clientId": "<public app client ID>",
+    "scopes": ["openid", "arturia/access"]
+  },
+  "redirectUri": "https://<web origin>/",
+  "logoutUri": "https://<web origin>/"
+}
+```
+
+- Only these fields are accepted; unknown fields such as a client secret make the file invalid. Every value is public.
+- `apiBaseUrl` is an HTTPS base URL, stage path included, without credentials, query or fragment. Requests resolve contract paths under it.
+- `cognito.domain` is an HTTPS origin without a path; the app derives `/oauth2/authorize`, `/oauth2/token` and `/logout` from it. `clientId` is a public client without a secret, and `scopes` must include `arturia/access`.
+- `redirectUri` and `logoutUri` must equal the root URL of the page origin, which must be HTTPS. The same values are registered as the Cognito callback and sign-out URLs.
+- A missing (403, 404 or HTML fallback), invalid (including a type other than `application/json`) or unreachable file, or one that takes longer than 5 s, leaves sign-in disabled with a visible error and no API or identity requests.
+
+Hosting serves `/config.json` with `Cache-Control: no-store`, outside the SPA fallback, and as same-origin content (`connect-src 'self'`). `index.html` is not cached; hashed bundles can be cached immutably. The fixture and integrated configurations inject their providers through a build-time file replacement and never request the file. The build fails if it contains a `config.json` or origins other than the framework's own.
 
 ## API contract
 

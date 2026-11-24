@@ -1,7 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 
 import { AuthSession } from '../auth/auth-session';
-import { CHAT_API_ORIGIN, ChatApiError, turnPath } from './chat-api';
+import { apiUrl, CHAT_API_BASE_URL, ChatApiError, turnPath } from './chat-api';
 import type { ArturiaV1SSEPayload } from './contract/sse.generated';
 
 function decodeEvent(name: string, data: string[], turnId: string): ArturiaV1SSEPayload {
@@ -84,7 +84,7 @@ async function* readEvents(
 
 @Injectable({ providedIn: 'root' })
 export class ChatStream {
-  private readonly origin = inject(CHAT_API_ORIGIN);
+  private readonly baseUrl = inject(CHAT_API_BASE_URL);
   private readonly auth = inject(AuthSession);
 
   async *connect(
@@ -96,10 +96,10 @@ export class ChatStream {
     signal.throwIfAborted();
     const token = this.auth.accessToken();
     if (!token) throw new ChatApiError(401);
-    if (!this.origin) throw new ChatApiError(501);
+    if (!this.baseUrl) throw new ChatApiError(501);
 
     const attempt = AbortSignal.any([signal, AbortSignal.timeout(30_000)]);
-    const url = new URL(turnPath({ scopeId, turnId }) + '/events', this.origin);
+    const url = apiUrl(this.baseUrl, turnPath({ scopeId, turnId }) + '/events');
     url.searchParams.set('after', String(after));
     const response = await fetch(url, {
       method: 'GET',

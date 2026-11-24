@@ -1,8 +1,16 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 
+import { APP_OPTIONS } from './core/app-options';
 import { AuthSession } from './core/auth/auth-session';
+import type { RuntimeConfigError } from './core/runtime-config';
 import { ScopeSwitcher } from './features/scopes/scope-switcher';
+
+const configErrors: Record<RuntimeConfigError, string> = {
+  missing: 'Falta la configuración publicada.',
+  invalid: 'La configuración publicada no es válida.',
+  unreachable: 'No se pudo obtener la configuración.',
+};
 
 @Component({
   selector: 'app-home',
@@ -18,6 +26,8 @@ import { ScopeSwitcher } from './features/scopes/scope-switcher';
         <app-scope-switcher />
       } @else if (auth.signInAvailable) {
         <button class="primary" type="button" (click)="signIn()">Iniciar sesión</button>
+      } @else if (configError) {
+        <p class="notice" role="alert">{{ configError }} El inicio de sesión está deshabilitado.</p>
       } @else {
         <p>El inicio de sesión todavía no está configurado.</p>
       }
@@ -31,6 +41,8 @@ export class HomePage {
   protected readonly auth = inject(AuthSession);
   protected readonly busy = signal(false);
   protected readonly error = signal('');
+  private readonly configErrorKey = inject(APP_OPTIONS).configError;
+  protected readonly configError = this.configErrorKey ? configErrors[this.configErrorKey] : '';
 
   constructor() {
     const route = inject(ActivatedRoute);

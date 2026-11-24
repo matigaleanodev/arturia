@@ -50,13 +50,18 @@ export class ChatApiError extends Error {
   }
 }
 
-export const CHAT_API_ORIGIN = new InjectionToken<string | undefined>('Chat API origin', {
+export const CHAT_API_BASE_URL = new InjectionToken<string | undefined>('Chat API base URL', {
   providedIn: 'root',
   factory: () => {
-    const url = httpsUrl(inject(APP_OPTIONS).apiOrigin);
-    return url?.pathname === '/' && !url.search ? url.origin : undefined;
+    const url = httpsUrl(inject(APP_OPTIONS).apiBaseUrl);
+    return url && !url.search && url.pathname.endsWith('/') ? url.href : undefined;
   },
 });
+
+// Resolves contract paths under the base URL so a stage prefix such as /prod/ is preserved.
+export function apiUrl(baseUrl: string, path: string): URL {
+  return new URL(`.${path}`, baseUrl);
+}
 
 function segment(id: string): string {
   if (!id || id === '.' || id === '..') throw new Error('Invalid resource identifier');
@@ -77,7 +82,7 @@ export function turnPath(ref: TurnRef): string {
 
 @Injectable({ providedIn: 'root' })
 export class HttpChatApi implements ChatApi {
-  private readonly origin = inject(CHAT_API_ORIGIN);
+  private readonly baseUrl = inject(CHAT_API_BASE_URL);
   private readonly auth = inject(AuthSession);
 
   listConversations(scopeId: string, signal: AbortSignal): Promise<ConversationList> {
@@ -121,12 +126,12 @@ export class HttpChatApi implements ChatApi {
     idempotencyKey?: string,
   ): Promise<T> {
     const token = this.auth.accessToken();
-    if (!token || !this.origin) throw new Error('Chat API is unavailable');
+    if (!token || !this.baseUrl) throw new Error('Chat API is unavailable');
 
     const headers = new Headers({ Authorization: `Bearer ${token}` });
     if (body) headers.set('Content-Type', 'application/json');
     if (idempotencyKey) headers.set('Idempotency-Key', idempotencyKey);
-    const response = await fetch(new URL(path, this.origin), {
+    const response = await fetch(apiUrl(this.baseUrl, path), {
       method: body === undefined ? 'GET' : 'POST',
       body: body ? JSON.stringify(body) : undefined,
       headers,

@@ -23,7 +23,29 @@ Ejecutar `npm run start:fixtures` para servir la aplicación con una conversaci�
 
 ## Configuración de la aplicación
 
-Los providers de `src/app/app-environment.ts` definen el origen HTTPS de la API, los endpoints OAuth de autorización y token, el ID público del cliente, los scopes solicitados y los IDs de ámbito. Registrá la URL raíz del origen web como URI de redirección de OAuth. La aplicación intercambia el código de autorización con PKCE S256.
+El build de producción no contiene valores del ambiente. Antes de iniciar, la aplicación pide `/config.json` a su propio origen con `cache: 'no-store'`, sin credenciales ni redirecciones, y lo valida. Un mismo build se publica con un archivo distinto en cada despliegue.
+
+```json
+{
+  "version": 1,
+  "apiBaseUrl": "https://<rest-api-id>.execute-api.<region>.amazonaws.com/<stage>/",
+  "cognito": {
+    "domain": "https://<prefijo>.auth.<region>.amazoncognito.com",
+    "clientId": "<ID público del cliente>",
+    "scopes": ["openid", "arturia/access"]
+  },
+  "redirectUri": "https://<origen web>/",
+  "logoutUri": "https://<origen web>/"
+}
+```
+
+- Solo se aceptan estos campos; uno desconocido, como un secreto de cliente, invalida el archivo. Todos los valores son públicos.
+- `apiBaseUrl` es una URL base HTTPS, con el path del stage, sin credenciales, query ni fragmento. Las solicitudes resuelven las rutas del contrato debajo de ella.
+- `cognito.domain` es un origen HTTPS sin path; la aplicación deriva `/oauth2/authorize`, `/oauth2/token` y `/logout`. `clientId` es un cliente público sin secreto y `scopes` debe incluir `arturia/access`.
+- `redirectUri` y `logoutUri` deben ser la URL raíz del origen de la página, que debe ser HTTPS. Los mismos valores se registran como URL de callback y de cierre de sesión en Cognito.
+- Si el archivo falta (403, 404 o fallback HTML), es inválido (incluido un tipo distinto de `application/json`), no responde o tarda más de 5 s, el inicio de sesión queda deshabilitado con un error visible y sin solicitudes a la API ni a la identidad.
+
+El hosting sirve `/config.json` con `Cache-Control: no-store`, fuera del fallback de la SPA y como contenido del mismo origen (`connect-src 'self'`). `index.html` no se cachea; los bundles con hash admiten caché inmutable. Las configuraciones de fixtures e integrada inyectan sus providers mediante el reemplazo de archivos del build y nunca piden el archivo. El build falla si contiene un `config.json` u orígenes distintos de los del framework.
 
 ## Contrato de API
 

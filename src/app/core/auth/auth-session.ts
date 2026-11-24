@@ -75,13 +75,13 @@ export class BrowserAuthSession implements AuthSession {
   private readonly oauth = inject(APP_OPTIONS).oauth;
   private readonly authorizationEndpoint = httpsUrl(this.oauth?.authorizationEndpoint);
   private readonly tokenEndpoint = httpsUrl(this.oauth?.tokenEndpoint);
-  private readonly redirectUri = new URL('/', location.href);
+  private readonly redirectUri = httpsUrl(this.oauth?.redirectUri);
   private readonly token = signal<string | null>(null);
   private expiryTimer?: ReturnType<typeof setTimeout>;
 
   readonly accessToken = this.token.asReadonly();
   readonly signInAvailable = Boolean(
-    this.redirectUri.protocol === 'https:' &&
+    this.redirectUri?.href === new URL('/', location.href).href &&
       this.oauth?.clientId &&
       this.oauth.scopes.length &&
       this.authorizationEndpoint &&
@@ -99,7 +99,7 @@ export class BrowserAuthSession implements AuthSession {
   }
 
   async begin(): Promise<URL> {
-    if (!this.signInAvailable || !this.oauth || !this.authorizationEndpoint) {
+    if (!this.signInAvailable || !this.oauth || !this.authorizationEndpoint || !this.redirectUri) {
       throw new Error('Sign-in is unavailable');
     }
 
@@ -136,6 +136,7 @@ export class BrowserAuthSession implements AuthSession {
       !this.signInAvailable ||
       !this.oauth ||
       !this.tokenEndpoint ||
+      !this.redirectUri ||
       callback.has('error') ||
       !code ||
       callback.getAll('code').length !== 1 ||

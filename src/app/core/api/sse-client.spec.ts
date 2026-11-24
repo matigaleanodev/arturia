@@ -16,7 +16,7 @@ it('sse_handles_split_utf8_and_frames', async () => {
     providers: [
       {
         provide: APP_OPTIONS,
-        useValue: { scopeIds: { personal: 'scope/a', work: 'work' }, apiOrigin: 'https://api.arturia.example' },
+        useValue: { scopeIds: { personal: 'scope/a', work: 'work' }, apiBaseUrl: 'https://api.arturia.example/prod/' },
       },
       { provide: AuthSession, useValue: { accessToken: signal('synthetic-token') } },
     ],
@@ -49,7 +49,7 @@ it('sse_handles_split_utf8_and_frames', async () => {
     { type: 'text', turnId: 'turn?', seq: 4, text: '¿Tomás café ☕?' },
     { type: 'status', turnId: 'turn?', status: 'completed', lastSeq: 4 },
   ]);
-  expect(fetchEvents).toHaveBeenCalledWith(new URL('https://api.arturia.example/v1/scopes/scope%2Fa/turns/turn%3F/events?after=3'), {
+  expect(fetchEvents).toHaveBeenCalledWith(new URL('https://api.arturia.example/prod/v1/scopes/scope%2Fa/turns/turn%3F/events?after=3'), {
     method: 'GET',
     headers: new Headers({ Authorization: 'Bearer synthetic-token', Accept: 'text/event-stream' }),
     signal: expect.any(AbortSignal),

@@ -1,9 +1,15 @@
 import type { Provider } from '@angular/core';
 
 import { APP_OPTIONS, type AppOptions } from './core/app-options';
+import { loadRuntimeConfig } from './core/runtime-config';
 
-const options: AppOptions = {
-  scopeIds: { personal: 'personal', work: 'work' },
-};
+const scopeIds: AppOptions['scopeIds'] = { personal: 'personal', work: 'work' };
 
-export const appProviders: Provider[] = [{ provide: APP_OPTIONS, useValue: options }];
+// The build carries no environment values: each deployment publishes /config.json.
+export async function appEnvironment(): Promise<Provider[]> {
+  const result = await loadRuntimeConfig(new URL(location.href));
+  const options: AppOptions = 'connection' in result
+    ? { scopeIds, apiBaseUrl: result.connection.apiBaseUrl, oauth: result.connection.oauth }
+    : { scopeIds, configError: result.error };
+  return [{ provide: APP_OPTIONS, useValue: options }];
+}

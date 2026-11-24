@@ -20,10 +20,10 @@ const work = {
   createdAt: '2026-01-01T00:00:00.000Z',
 };
 
-function configureStore(apiOrigin = 'https://api.arturia.example') {
+function configureStore(apiBaseUrl = 'https://api.arturia.example/prod/') {
   const options: AppOptions = {
     scopeIds: { personal: personal.scopeId, work: work.scopeId },
-    apiOrigin,
+    apiBaseUrl,
   };
   TestBed.configureTestingModule({
     providers: [
@@ -61,11 +61,11 @@ it('queries a recovered active turn by ID and uses its authoritative snapshot', 
     expect((request.headers as Headers).get('Authorization')).toBe('Bearer synthetic-access-token');
     expect(request.method).toBe('GET');
     switch (url.pathname) {
-      case '/v1/scopes/scope-personal/conversations':
+      case '/prod/v1/scopes/scope-personal/conversations':
         return Response.json({ conversations: [personal] });
-      case '/v1/scopes/scope-personal/conversations/conversation-01':
+      case '/prod/v1/scopes/scope-personal/conversations/conversation-01':
         return Response.json(detail);
-      case '/v1/scopes/scope-personal/turns/persisted-turn':
+      case '/prod/v1/scopes/scope-personal/turns/persisted-turn':
         return Response.json(result);
       default:
         throw new Error('Unexpected request');
@@ -81,9 +81,9 @@ it('queries a recovered active turn by ID and uses its authoritative snapshot', 
     ]);
   });
   expect(requests).toEqual([
-    '/v1/scopes/scope-personal/conversations',
-    '/v1/scopes/scope-personal/conversations/conversation-01',
-    '/v1/scopes/scope-personal/turns/persisted-turn',
+    '/prod/v1/scopes/scope-personal/conversations',
+    '/prod/v1/scopes/scope-personal/conversations/conversation-01',
+    '/prod/v1/scopes/scope-personal/turns/persisted-turn',
   ]);
 });
 
