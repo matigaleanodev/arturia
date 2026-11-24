@@ -45,7 +45,7 @@ The production build carries no environment values. Before bootstrapping, the ap
 - `redirectUri` and `logoutUri` must equal the root URL of the page origin, which must be HTTPS. The same values are registered as the Cognito callback and sign-out URLs.
 - A missing (403, 404 or HTML fallback), invalid (including a type other than `application/json`) or unreachable file, or one that takes longer than 5 s, leaves sign-in disabled with a visible error and no API or identity requests.
 
-Hosting serves `/config.json` with `Cache-Control: no-store`, outside the SPA fallback, and as same-origin content (`connect-src 'self'`). `index.html` is not cached; hashed bundles can be cached immutably. The fixture and integrated configurations inject their providers through a build-time file replacement and never request the file. The build fails if it contains a `config.json` or origins other than the framework's own.
+Hosting serves `/config.json` with `Cache-Control: no-store`, outside the SPA fallback, and as same-origin content (`connect-src 'self'`). `index.html` is not cached; hashed bundles can be cached immutably. The fixture and integrated configurations inject their providers through a build-time file replacement and never request the file. The build fails if it contains a `config.json` or origins other than the framework's own. The hosting CSP allows only same-origin scripts, so critical CSS inlining is off and the build also fails if `index.html` has an inline script or event handler, or if a script, stylesheet or media file lacks a content hash.
 
 ## API contract
 

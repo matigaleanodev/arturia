@@ -45,7 +45,7 @@ El build de producción no contiene valores del ambiente. Antes de iniciar, la a
 - `redirectUri` y `logoutUri` deben ser la URL raíz del origen de la página, que debe ser HTTPS. Los mismos valores se registran como URL de callback y de cierre de sesión en Cognito.
 - Si el archivo falta (403, 404 o fallback HTML), es inválido (incluido un tipo distinto de `application/json`), no responde o tarda más de 5 s, el inicio de sesión queda deshabilitado con un error visible y sin solicitudes a la API ni a la identidad.
 
-El hosting sirve `/config.json` con `Cache-Control: no-store`, fuera del fallback de la SPA y como contenido del mismo origen (`connect-src 'self'`). `index.html` no se cachea; los bundles con hash admiten caché inmutable. Las configuraciones de fixtures e integrada inyectan sus providers mediante el reemplazo de archivos del build y nunca piden el archivo. El build falla si contiene un `config.json` u orígenes distintos de los del framework.
+El hosting sirve `/config.json` con `Cache-Control: no-store`, fuera del fallback de la SPA y como contenido del mismo origen (`connect-src 'self'`). `index.html` no se cachea; los bundles con hash admiten caché inmutable. Las configuraciones de fixtures e integrada inyectan sus providers mediante el reemplazo de archivos del build y nunca piden el archivo. El build falla si contiene un `config.json` u orígenes distintos de los del framework. La CSP del hosting solo admite scripts del mismo origen: por eso el inlining de CSS crítico está desactivado, y el build también falla si `index.html` tiene un script o un manejador de eventos inline, o si un script, una hoja de estilos o un archivo de medios no lleva hash de contenido.
 
 ## Contrato de API
 

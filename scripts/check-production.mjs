@@ -19,3 +19,14 @@ for (const file of files.filter(name => /\.(js|css|html)$/.test(name))) {
   assert.deepEqual(hosts.filter(host => !frameworkHosts.has(host)), [],
     `${file} embeds origins that belong in the runtime configuration`);
 }
+
+// The hosting CSP allows only same-origin scripts (script-src 'self'): no inline scripts or event handlers.
+const index = await readFile(join(browser, 'index.html'), 'utf8');
+const inlineScripts = [...index.matchAll(/<script\b([^>]*)>/gi)].filter(([, attributes]) => !/\bsrc\s*=/i.test(attributes));
+assert.deepEqual(inlineScripts.map(([tag]) => tag), [], 'index.html must not contain inline scripts');
+assert.ok(!/<[^>]+\son[a-z]+\s*=/i.test(index), 'index.html must not contain inline event handlers');
+// The hosting caches scripts, styles and media as immutable: each one needs a content hash in its name.
+const unhashed = files.map(file => file.split('\\').join('/'))
+  .filter(file => /\.(js|css)$/.test(file) || file.startsWith('media/'))
+  .filter(file => !/-[A-Z0-9]{8}\.[A-Za-z0-9]+$/.test(file));
+assert.deepEqual(unhashed, [], 'Scripts, styles and media must carry a content hash');
