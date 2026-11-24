@@ -1,10 +1,11 @@
-import { existsSync, statSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 
 import { expect, type Page, type Route, test } from '@playwright/test';
 
+import { dist, fulfillFromDist } from './support/pilot-hosting';
+
 // The production build is served from dist/ under synthetic https origins, so one build meets several configurations.
-const dist = resolve('dist/arturia/browser');
 
 function configFor(origin: string, login: string, clientId: string) {
   return {
@@ -17,6 +18,7 @@ function configFor(origin: string, login: string, clientId: string) {
 }
 
 async function serveBuild(page: Page, origin: string, config: (route: Route) => Promise<void>) {
+  // Stricter than the pilot policy (no inline styles) to prove the theme starts without any inline code.
   const csp = "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; base-uri 'self'";
   const requests: string[] = [];
   const authorizations: URL[] = [];
@@ -33,10 +35,7 @@ async function serveBuild(page: Page, origin: string, config: (route: Route) => 
     const navigation = route.request().resourceType() === 'document' || url.pathname === '/favicon.ico';
     if (!navigation) requests.push(url.pathname);
     if (url.pathname === '/config.json') return config(route);
-    const file = join(dist, url.pathname);
-    return url.pathname !== '/' && existsSync(file) && statSync(file).isFile()
-      ? route.fulfill({ path: file })
-      : route.fulfill({ path: join(dist, 'index.html'), contentType: 'text/html', headers: { 'content-security-policy': csp } });
+    return fulfillFromDist(route, url.pathname, { 'content-security-policy': csp });
   });
   return { requests, authorizations };
 }
