@@ -66,6 +66,8 @@ npm run verify
 
 `verify` comprueba el digest y los tipos generados, ejecuta Vitest, compila para producción y ejecuta Playwright con la configuración de fixtures. Ejecutar `npm test` o `npm run test:e2e` para seleccionar una suite.
 
+`npm run test:e2e:aws` comprueba un ambiente desplegado en Chromium y nunca se ejecuta en `verify`. Requiere `ARTURIA_E2E_WEB_URL` (raíz de la distribución), `ARTURIA_E2E_API_URL` (URL base de la API con su stage) y `ARTURIA_E2E_ACCESS_TOKEN`, y acepta `ARTURIA_E2E_SCOPE` (`personal` o `work`). Todos los valores se validan antes de abrir el navegador, el token solo se guarda en el `sessionStorage` de la página, solo resuelven los dos hosts declarados y no se conservan traces, videos, capturas ni salida de las pruebas. Cada ejecución crea una conversación en el ámbito elegido.
+
 ## Licencia
 
 [Matías Galeano](https://github.com/matigaleanodev) mantiene Arturia. El proyecto se distribuye bajo la [MPL-2.0](LICENSE). El archivo [NOTICE](NOTICE) contiene el aviso del código fuente y la atribución.

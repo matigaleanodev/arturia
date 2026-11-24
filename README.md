@@ -66,6 +66,8 @@ npm run verify
 
 `verify` checks the snapshot digest and generated types, runs Vitest, builds for production, and runs Playwright with the fixture configuration. Run `npm test` or `npm run test:e2e` to select a suite.
 
+`npm run test:e2e:aws` checks a deployed environment in Chromium and never runs in `verify`. It requires `ARTURIA_E2E_WEB_URL` (distribution root), `ARTURIA_E2E_API_URL` (API base URL with its stage) and `ARTURIA_E2E_ACCESS_TOKEN`, plus an optional `ARTURIA_E2E_SCOPE` (`personal` or `work`). Every value is validated before a browser starts, the token is only stored in the page's `sessionStorage`, only the two declared hosts resolve, and no traces, videos, screenshots or test output are kept. Each run creates one conversation in the chosen scope.
+
 ## License
 
 Arturia is maintained by [Matías Galeano](https://github.com/matigaleanodev) and distributed under [MPL-2.0](LICENSE). See [NOTICE](NOTICE) for the source notice and attribution.

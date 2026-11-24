@@ -17,7 +17,9 @@
     "test:contract": "node --test scripts/check-contract.test.mjs",
     "test": "ng test --watch=false",
     "test:e2e": "playwright test",
-    "verify": "npm run test:contract && npm run contract:check && npm test && npm run build && npm run test:e2e"
+    "test:e2e:aws": "playwright test --config playwright.aws.config.ts",
+    "test:e2e:aws:unit": "node --test \"tests/e2e-aws/*.test.ts\"",
+    "verify": "npm run test:contract && npm run contract:check && npm run test:e2e:aws:unit && npm test && npm run build && npm run test:e2e"
   },
   "dependencies": {
     "@angular/common": "22.3.0",
