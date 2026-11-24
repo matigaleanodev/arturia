@@ -11,6 +11,7 @@ import type {
   TurnInput,
   TurnSnapshot,
 } from './contract/openapi.generated';
+import { parseRetryAfter } from './retry-after';
 
 export interface ConversationRef {
   readonly scopeId: string;
@@ -45,7 +46,7 @@ export abstract class ChatApi {
 }
 
 export class ChatApiError extends Error {
-  constructor(readonly status: number) {
+  constructor(readonly status: number, readonly retryAfterMs?: number) {
     super(`Chat request failed (${status})`);
   }
 }
@@ -142,6 +143,9 @@ export class HttpChatApi implements ChatApi {
       referrerPolicy: 'no-referrer',
     });
     if (response.status === 401 && this.auth.accessToken() === token) this.auth.clear();
+    if (response.status === 429) {
+      throw new ChatApiError(429, parseRetryAfter(response.headers.get('retry-after'), Date.now()));
+    }
     if (!response.ok) throw new ChatApiError(response.status);
     return await response.json() as T;
   }

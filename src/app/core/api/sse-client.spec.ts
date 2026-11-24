@@ -4,6 +4,7 @@ import { afterEach, expect, it, vi } from 'vitest';
 
 import { APP_OPTIONS } from '../app-options';
 import { AuthSession } from '../auth/auth-session';
+import { ChatApiError } from './chat-api';
 import { ChatStream } from './sse-client';
 
 afterEach(() => {
@@ -58,4 +59,32 @@ it('sse_handles_split_utf8_and_frames', async () => {
     cache: 'no-store',
     referrerPolicy: 'no-referrer',
   });
+});
+
+it.each([
+  ['5', 5_000],
+  [null, undefined],
+  ['mañana', undefined],
+])('sse_429_reports_a_readable_retry_after (%j)', async (retryAfter, expected) => {
+  TestBed.configureTestingModule({
+    providers: [
+      {
+        provide: APP_OPTIONS,
+        useValue: { scopeIds: { personal: 'scope/a', work: 'work' }, apiBaseUrl: 'https://api.arturia.example/prod/' },
+      },
+      { provide: AuthSession, useValue: { accessToken: signal('synthetic-token'), clear: vi.fn() } },
+    ],
+  });
+  const headers = new Headers({ 'Content-Type': 'application/json' });
+  if (retryAfter !== null) headers.set('Retry-After', retryAfter);
+  vi.stubGlobal('fetch', vi.fn(async () => Response.json(
+    { code: 'RATE_LIMITED', message: 'Hay demasiadas solicitudes.', requestId: 'synthetic' },
+    { status: 429, headers },
+  )));
+
+  const events = TestBed.inject(ChatStream).connect('scope/a', 'turn', 0, new AbortController().signal);
+  const error = await events.next().then(() => undefined, (reason: unknown) => reason);
+
+  expect(error).toBeInstanceOf(ChatApiError);
+  expect(error).toMatchObject({ status: 429, retryAfterMs: expected });
 });

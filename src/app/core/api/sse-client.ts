@@ -3,6 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { AuthSession } from '../auth/auth-session';
 import { apiUrl, CHAT_API_BASE_URL, ChatApiError, turnPath } from './chat-api';
 import type { ArturiaV1SSEPayload } from './contract/sse.generated';
+import { parseRetryAfter } from './retry-after';
 
 function decodeEvent(name: string, data: string[], turnId: string): ArturiaV1SSEPayload {
   const event = JSON.parse(data.join('\n')) as Record<string, unknown> | null;
@@ -115,6 +116,9 @@ export class ChatStream {
       void response.body?.cancel().catch(() => {});
       attempt.throwIfAborted();
       if (response.status === 401 && this.auth.accessToken() === token) this.auth.clear();
+      if (response.status === 429) {
+        throw new ChatApiError(429, parseRetryAfter(response.headers.get('retry-after'), Date.now()));
+      }
       throw new ChatApiError(response.ok ? 501 : response.status);
     }
     yield* readEvents(response.body, turnId, attempt);

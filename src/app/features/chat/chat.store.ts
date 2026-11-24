@@ -1,4 +1,4 @@
-import { computed, DestroyRef, inject, Injectable, signal } from '@angular/core';
+import { computed, DestroyRef, effect, inject, Injectable, signal } from '@angular/core';
 
 import { ChatApi, ChatApiError } from '../../core/api/chat-api';
 import type {
@@ -9,6 +9,13 @@ import type {
   TurnStatus,
 } from '../../core/api/contract/openapi.generated';
 import { ChatStream } from '../../core/api/sse-client';
+import { AuthSession } from '../../core/auth/auth-session';
+import {
+  POLL_THROTTLE_BACKOFF,
+  SSE_RECOVERY_BUDGET_MS,
+  SSE_THROTTLE_BACKOFF,
+  throttleDelay,
+} from './throttle-backoff';
 
 interface ChatContext {
   readonly scopeId: string;
@@ -18,6 +25,14 @@ interface ChatContext {
 }
 
 type StreamOutcome = 'poll' | 'wait' | 'terminal';
+
+/** Consecutive throttled snapshot reads and the latest Retry-After of a follower in polling. */
+interface PollThrottle {
+  count: number;
+  retryAfterMs?: number;
+}
+
+const POLL_INTERVAL_MS = 750;
 
 type NoticeKind = 'history' | 'conversation' | 'create' | 'send' | 'poll' | 'cancel';
 
@@ -42,6 +57,7 @@ function wait(delay: number, signal: AbortSignal): Promise<void> {
 export class ChatStore {
   private readonly api = inject(ChatApi);
   private readonly stream = inject(ChatStream);
+  private readonly auth = inject(AuthSession);
   private context?: ChatContext;
 
   private readonly history = signal<ConversationSummary[]>([]);
@@ -72,6 +88,10 @@ export class ChatStore {
 
   constructor() {
     inject(DestroyRef).onDestroy(() => this.context?.controller.abort());
+    // Signing out cancels every pending retry and stream at once.
+    effect(() => {
+      if (!this.auth.accessToken()) this.context?.controller.abort();
+    });
   }
 
   open(scopeId: string, conversationId: string | null): void {
@@ -235,21 +255,24 @@ export class ChatStore {
     const controller = new AbortController();
     context.followers.set(turnId, controller);
     const signal = AbortSignal.any([context.controller.signal, controller.signal]);
+    const throttle: PollThrottle = { count: 0 };
 
     try {
       if (!awaitingTerminal) {
-        await this.refreshTurn(context, turnId, signal, false);
+        await this.refreshTurn(context, turnId, signal, false, throttle);
         const snapshot = this.turnSnapshot(turnId);
         if (signal.aborted || !snapshot || !active(snapshot.status)) return;
 
         const outcome = await this.streamTurn(context, snapshot, signal);
         awaitingTerminal = outcome === 'terminal';
-        if (outcome === 'wait') await wait(750, signal);
+        if (outcome === 'wait') await wait(POLL_INTERVAL_MS, signal);
       }
 
       while (!signal.aborted && (awaitingTerminal || this.turnIsActive(turnId))) {
-        if (await this.refreshTurn(context, turnId, signal, awaitingTerminal)) awaitingTerminal = false;
-        if (awaitingTerminal || this.turnIsActive(turnId)) await wait(750, signal);
+        if (await this.refreshTurn(context, turnId, signal, awaitingTerminal, throttle)) {
+          awaitingTerminal = false;
+        }
+        if (awaitingTerminal || this.turnIsActive(turnId)) await wait(pollDelay(throttle), signal);
       }
     } finally {
       context.followers.delete(turnId);
@@ -266,6 +289,10 @@ export class ChatStore {
     let after = text ? snapshot.lastSeq : 0;
 
     let consecutiveStalls = 0;
+    // Throttling episode: from its first 429 until a connection brings a new block. Other errors and
+    // admitted connections without progress do not restart it; they spend the stall budget instead.
+    let throttledSince: number | undefined;
+    let throttledAttempts = 0;
     while (!signal.aborted) {
       const connectionStart = after;
       try {
@@ -301,11 +328,27 @@ export class ChatStore {
             this.setPreview(turnId, '');
             return 'poll';
           }
-          if (error.status === 501 || error.status < 500 && error.status !== 429) return 'wait';
+          if (error.status === 429) {
+            throttledSince ??= performance.now();
+            const delay = Math.max(
+              error.retryAfterMs ?? 0,
+              throttleDelay(++throttledAttempts, SSE_THROTTLE_BACKOFF),
+            );
+            // A retry that cannot start within the budget leaves recovery to the snapshot.
+            if (performance.now() - throttledSince + delay > SSE_RECOVERY_BUDGET_MS) return 'poll';
+            await wait(delay, signal);
+            continue;
+          }
+          if (error.status === 501 || error.status < 500) return 'wait';
         }
       }
-
-      consecutiveStalls = after === connectionStart ? consecutiveStalls + 1 : 0;
+      if (after === connectionStart) {
+        consecutiveStalls++;
+      } else {
+        consecutiveStalls = 0;
+        throttledSince = undefined;
+        throttledAttempts = 0;
+      }
       if (consecutiveStalls >= 3) break;
       await wait(consecutiveStalls === 2 ? 500 : 250, signal);
     }
@@ -317,6 +360,7 @@ export class ChatStore {
     turnId: string,
     signal: AbortSignal,
     awaitingTerminal: boolean,
+    throttle: PollThrottle,
   ): Promise<boolean> {
     try {
       const snapshot = await this.api.getTurn({ scopeId: context.scopeId, turnId }, signal);
@@ -327,10 +371,17 @@ export class ChatStore {
       if (!this.applySnapshot(context, turnId, snapshot) && awaitingTerminal) {
         throw new Error('Snapshot predates the terminal status');
       }
+      throttle.count = 0;
       this.clearNotice('poll');
       return true;
     } catch (error) {
       if (signal.aborted || !this.isCurrent(context)) return false;
+      if (error instanceof ChatApiError && error.status === 429) {
+        throttle.count++;
+        throttle.retryAfterMs = error.retryAfterMs;
+      } else {
+        throttle.count = 0;
+      }
       if (error instanceof ChatApiError && [401, 403, 404].includes(error.status)) {
         this.retireConversation(context);
       } else {
@@ -414,4 +465,11 @@ export class ChatStore {
   private clearNotice(kind: NoticeKind): void {
     if (this.notice()?.kind === kind) this.notice.set(null);
   }
+}
+
+function pollDelay(throttle: PollThrottle): number {
+  if (!throttle.count) return POLL_INTERVAL_MS;
+  // No single wait exceeds one SSE window, whatever Retry-After asks for.
+  const retryAfter = Math.min(throttle.retryAfterMs ?? 0, SSE_RECOVERY_BUDGET_MS);
+  return Math.max(retryAfter, throttleDelay(throttle.count, POLL_THROTTLE_BACKOFF));
 }
