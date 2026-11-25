@@ -153,11 +153,17 @@ export class ChatStore {
     this.sendingMessage.set(true);
     this.clearNotice('send');
     this.clearNotice('create');
+    // The text and its key are fixed before the conversation exists, so the field is read-only meanwhile.
+    const fresh = this.intent() === null;
+    if (fresh) this.intent.set({ text, key: crypto.randomUUID() });
     let created: string | undefined;
     try {
       if (context.conversationId === null) {
         const summary = await this.createConversation(context);
-        if (!summary) return undefined;
+        if (!summary) {
+          if (fresh && this.isCurrent(context)) this.intent.set(null);
+          return undefined;
+        }
         created = summary.conversationId;
       }
       await this.acceptIntent(context, context.conversationId!, text);

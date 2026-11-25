@@ -45,7 +45,10 @@ interface Recorded {
 }
 
 /** Fetch double: lists one conversation, creates `created` and answers turns with `acceptTurn`. */
-function stubApi(acceptTurn: () => Response | Promise<Response>, createConversation = () => Response.json(created, { status: 201 })) {
+function stubApi(
+  acceptTurn: () => Response | Promise<Response>,
+  createConversation: () => Response | Promise<Response> = () => Response.json(created, { status: 201 }),
+) {
   const requests: Recorded[] = [];
   vi.stubGlobal('fetch', vi.fn(async (url: URL, request: RequestInit) => {
     request.signal?.throwIfAborted();
@@ -195,4 +198,42 @@ it('does not send while a requested conversation is still loading or failed to l
   await expect(store.send()).resolves.toBeUndefined();
 
   expect(requests.filter((entry) => entry.startsWith('POST'))).toEqual([]);
+});
+
+it('locks the draft while the first message creates its conversation, so no keystroke is lost', async () => {
+  const store = configureStore();
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => { release = resolve; });
+  stubApi(
+    () => Response.json({ turnId: 'turn-01', status: 'queued' }, { status: 202 }),
+    async () => {
+      await gate;
+      return Response.json(created, { status: 201 });
+    },
+  );
+  store.open(scopeId, null);
+  store.draft.set('Primer mensaje');
+
+  const sending = store.send();
+  // The text and its key are fixed before the conversation exists; the composer shows the field read-only.
+  expect(store.pending()).toBe(true);
+  release();
+  await expect(sending).resolves.toBe('created-01');
+  expect(store.draft()).toBe('');
+  expect(store.pending()).toBe(false);
+});
+
+it('unlocks the draft when the conversation cannot be created', async () => {
+  const store = configureStore();
+  stubApi(
+    () => Response.json({ turnId: 'turn-01', status: 'queued' }, { status: 202 }),
+    () => new Response('boom', { status: 500 }),
+  );
+  store.open(scopeId, null);
+  store.draft.set('Primer mensaje');
+
+  await expect(store.send()).resolves.toBeUndefined();
+  expect(store.pending()).toBe(false);
+  expect(store.draft()).toBe('Primer mensaje');
+  expect(store.error()).toContain('No se pudo crear la conversación');
 });
