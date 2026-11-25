@@ -92,6 +92,7 @@
   }
 
   .icon-button:hover { background: var(--state-hover); color: var(--text-main); }
+  .icon-button:active { background: var(--state-active); color: var(--text-main); }
 
   .button {
     display: inline-flex;

@@ -24,6 +24,7 @@
   }
 
   .theme-switch button:hover { color: var(--text-main); }
+  .theme-switch button:active { background: var(--state-active); color: var(--text-main); }
   .theme-switch button[aria-pressed='true'] { background: var(--state-selected); color: var(--action-text); }
   .theme-switch .icon { inline-size: 1.125rem; block-size: 1.125rem; }
 

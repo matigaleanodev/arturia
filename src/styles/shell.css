@@ -52,6 +52,7 @@
   }
 
   .scope-button:hover { border-color: var(--border-control); }
+  .scope-button:active { background: var(--state-active); }
   .scope-button .chev { margin-inline-start: auto; inline-size: 1.125rem; block-size: 1.125rem; color: var(--text-secondary); }
 
   .scope-initial {
@@ -91,6 +92,7 @@
   }
 
   .scope-menu a:hover { background: var(--state-hover); }
+  .scope-menu a:active { background: var(--state-active); }
   .scope-menu .check { margin-inline-start: auto; color: var(--action-text); }
 
   .nav-item {
@@ -106,6 +108,7 @@
   }
 
   .nav-item:hover { background: var(--state-hover); }
+  .nav-item:active { background: var(--state-active); }
   .nav-item .icon { color: var(--text-secondary); }
   .sidebar-actions { display: grid; gap: 0.125rem; margin-block-start: 0.75rem; }
 
@@ -139,6 +142,7 @@
   }
 
   .history a:hover { background: var(--state-hover); }
+  .history a:active { background: var(--state-active); }
 
   .history a[aria-current='page'] {
     background: var(--state-selected);
@@ -169,6 +173,9 @@
     font-size: 0.875rem;
     font-weight: 700;
   }
+
+  .rail-scope:hover { background: var(--state-hover); border-color: var(--border-control); }
+  .rail-scope:active { background: var(--state-active); }
 
   .rail-spacer { flex: 1; }
 

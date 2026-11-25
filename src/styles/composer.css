@@ -68,6 +68,7 @@
   /* 44 px target around the 40 px button. */
   .send::before { content: ''; position: absolute; inset: -0.125rem; border-radius: 50%; }
   .send:enabled:hover { background: var(--action-hover); }
+  .send:enabled:active { background: var(--action-active); }
   .send:disabled { background: var(--state-active); color: var(--text-disabled); cursor: default; }
   .send .icon svg { stroke-width: 2; }
   .stop-glyph { inline-size: 0.875rem; block-size: 0.875rem; border-radius: 0.1875rem; background: currentColor; }

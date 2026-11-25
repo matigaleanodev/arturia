@@ -16,6 +16,7 @@
   }
 
   .back:hover { background: var(--state-hover); color: var(--text-main); }
+  .back:active { background: var(--state-active); color: var(--text-main); }
 
   .settings-body {
     display: grid;
@@ -41,6 +42,7 @@
   }
 
   .settings-nav a:hover { background: var(--state-hover); }
+  .settings-nav a:active { background: var(--state-active); }
   .settings-nav a[aria-current='true'] { background: var(--state-selected); font-weight: 600; }
   .settings-nav .icon { color: var(--text-secondary); }
 
@@ -63,6 +65,7 @@
   }
 
   .theme-option:hover { border-color: var(--border-control); }
+  .theme-option:active { background: var(--state-active); }
   .theme-option:has(input:checked) { border-color: var(--action-text); background: var(--state-selected); box-shadow: 0 0 0 1px var(--action-text); }
   .theme-option:has(input:focus-visible) { outline: 2px solid var(--state-focus); outline-offset: 2px; }
   /* The transparent radio covers the whole card, so the card is its click target. */

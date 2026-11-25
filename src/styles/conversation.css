@@ -134,6 +134,7 @@
   }
 
   .send-error button:hover { background: var(--state-hover); }
+  .send-error button:active { background: var(--state-active); }
 
   @media (max-width: 767.98px) {
     .msg-user { max-inline-size: 88%; }
