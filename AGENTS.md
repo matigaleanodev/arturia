@@ -5,7 +5,7 @@ Frontend Angular standalone, TypeScript estricto y señales. Leer también el AG
 - Usar OnPush, control de flujo moderno y entradas/salidas readonly. Mantener la lógica fuera de las plantillas.
 - Usar la copia versionada en `src/app/core/api/contract/` como fuente de tipos. Regenerar con `npm run contract:generate` después de sincronizar el contrato y el digest del API. Evitar editar los tipos generados a mano.
 - Reservar los fixtures sintéticos para la configuración de pruebas. Mantener su punto de entrada en `src/app/testing/`.
-- Validar con `npm ci` y `npm run verify`. La referencia técnica se mantiene en README.md y README.es.md.
+- Validar con `npm ci` y `npm run verify`. La referencia técnica se mantiene en `docs/` (pares EN/ES), enlazada desde README.md y README.es.md.
 
 ## Flujo Git
 
