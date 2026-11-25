@@ -287,6 +287,7 @@ test('local_dist_has_no_csp_violations', async ({ page }) => {
 
       await page.getByRole('link', { name: 'Nueva conversación', exact: true }).click();
       await expect(page).toHaveURL(`${web}/chat?scope=personal`);
+      await expect(page.getByRole('heading', { name: '¿En qué te ayudo?' })).toBeVisible();
       await expect(status).toHaveCount(0);
       await page.getByRole('textbox', { name: 'Mensaje' }).fill(fixtures.acceptTurn.request.text);
       await page.getByRole('button', { name: 'Enviar' }).click();
