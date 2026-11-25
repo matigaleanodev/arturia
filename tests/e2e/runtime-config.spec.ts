@@ -53,7 +53,7 @@ test('fixtures_keep_working_without_config_file', async ({ page }) => {
   await page.goto('/');
 
   await expect(page.getByText('Modo de prueba')).toBeVisible();
-  await page.getByRole('link', { name: 'Personal', exact: true }).click();
+  await expect(page).toHaveURL(/\/chat\?scope=personal$/);
   await expect(page.getByRole('link', { name: 'Conversación de ejemplo' })).toBeVisible();
   expect(configRequests).toEqual([]);
 });
@@ -92,7 +92,8 @@ test.describe('production build', () => {
       releaseConfig();
     }
     await expect(page.getByRole('button', { name: 'Iniciar sesión' })).toBeVisible();
-    await expect(page.getByRole('combobox', { name: 'Tema' })).toHaveValue('dark');
+    await expect(page.getByRole('group', { name: 'Tema' }).getByRole('button', { name: 'Oscuro' }))
+      .toHaveAttribute('aria-pressed', 'true');
     expect(violations).toEqual([]);
   });
 

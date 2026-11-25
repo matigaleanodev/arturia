@@ -1,0 +1,259 @@
+@layer components {
+  .shell {
+    display: grid;
+    grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+    flex: 1;
+    min-block-size: 0;
+    inline-size: 100%;
+  }
+
+  .shell.is-collapsed { grid-template-columns: var(--rail-width) minmax(0, 1fr); }
+
+  .sidebar {
+    display: flex;
+    flex-direction: column;
+    min-block-size: 0;
+    padding: 0.625rem 0.625rem 0.75rem;
+    background: var(--surface-rail);
+  }
+
+  .sidebar-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    block-size: 2.75rem;
+    padding-inline-start: 0.5rem;
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1.0625rem;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+  }
+
+  /* Scope disclosure */
+  .scope { position: relative; display: block; margin-block-start: 0.75rem; }
+
+  .scope-button {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    inline-size: 100%;
+    min-block-size: 2.75rem;
+    padding: 0 0.75rem 0 0.5rem;
+    border: 1px solid var(--border-muted);
+    border-radius: var(--shape-control);
+    background: var(--surface-panel);
+    text-align: start;
+    font-weight: 600;
+  }
+
+  .scope-button:hover { border-color: var(--border-control); }
+  .scope-button .chev { margin-inline-start: auto; inline-size: 1.125rem; block-size: 1.125rem; color: var(--text-secondary); }
+
+  .scope-initial {
+    display: grid;
+    place-items: center;
+    flex: none;
+    inline-size: 1.75rem;
+    block-size: 1.75rem;
+    border-radius: 0.5rem;
+    background: var(--state-selected);
+    color: var(--action-text);
+    font-size: 0.8125rem;
+    font-weight: 700;
+  }
+
+  .scope-menu {
+    position: absolute;
+    inset-inline: 0;
+    inset-block-start: calc(100% + 0.375rem);
+    z-index: 20;
+    padding: 0.375rem;
+    border: 1px solid var(--border-muted);
+    border-radius: 0.875rem;
+    background: var(--surface-panel);
+    box-shadow: var(--depth-panel);
+  }
+
+  .scope-menu a {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    min-block-size: 2.75rem;
+    padding: 0 0.625rem 0 0.375rem;
+    border-radius: 0.5rem;
+    color: var(--text-main);
+    text-decoration: none;
+  }
+
+  .scope-menu a:hover { background: var(--state-hover); }
+  .scope-menu .check { margin-inline-start: auto; color: var(--action-text); }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    inline-size: 100%;
+    min-block-size: 2.5rem;
+    padding: 0 0.625rem;
+    border-radius: var(--shape-control);
+    color: var(--text-main);
+    text-decoration: none;
+  }
+
+  .nav-item:hover { background: var(--state-hover); }
+  .nav-item .icon { color: var(--text-secondary); }
+  .sidebar-actions { display: grid; gap: 0.125rem; margin-block-start: 0.75rem; }
+
+  /* History */
+  .history { display: flex; flex: 1; flex-direction: column; min-block-size: 0; margin-block-start: 1.25rem; }
+
+  .history h2 {
+    padding: 0 0.625rem 0.375rem;
+    color: var(--text-secondary);
+    font-size: 0.8125rem;
+    font-weight: 600;
+  }
+
+  .history ul {
+    padding-block-end: 0.5rem;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-muted) transparent;
+  }
+
+  .history a {
+    display: block;
+    padding: 0.5rem 0.625rem;
+    border-radius: 0.5rem;
+    color: var(--text-main);
+    font-size: 0.875rem;
+    text-decoration: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .history a:hover { background: var(--state-hover); }
+
+  .history a[aria-current='page'] {
+    background: var(--state-selected);
+    box-shadow: inset 2px 0 0 var(--action-text);
+    font-weight: 600;
+  }
+
+  .history time { color: var(--text-secondary); }
+  .history time::before { content: '· '; }
+  .history-note { padding: 0.25rem 0.625rem; color: var(--text-secondary); font-size: 0.875rem; }
+
+  .sidebar-foot { margin-block-start: 0.25rem; padding-block-start: 0.5rem; border-block-start: 1px solid var(--border-muted); }
+
+  /* Collapsed rail */
+  .is-collapsed .sidebar { align-items: center; }
+  .rail-group { display: grid; justify-items: center; gap: 0.25rem; }
+  .rail-group + .rail-group { margin-block-start: 0.75rem; }
+
+  .rail-scope {
+    display: grid;
+    place-items: center;
+    inline-size: 2.5rem;
+    block-size: 2.5rem;
+    border: 1px solid var(--border-muted);
+    border-radius: var(--shape-control);
+    background: var(--surface-panel);
+    color: var(--action-text);
+    font-size: 0.875rem;
+    font-weight: 700;
+  }
+
+  .rail-spacer { flex: 1; }
+
+  /* Main area */
+  .main { position: relative; display: flex; flex-direction: column; min-inline-size: 0; min-block-size: 0; }
+
+  .topbar {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: 0.25rem;
+    block-size: 3.5rem;
+    padding: 0 1rem;
+  }
+
+  .topbar h1 {
+    min-inline-size: 0;
+    padding-inline: 0.5rem;
+    overflow: hidden;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .mobile-only { display: none; }
+
+  .scope-chip {
+    flex: none;
+    padding: 0.125rem 0.625rem;
+    border-radius: 999px;
+    background: var(--state-selected);
+    color: var(--action-text);
+    font-size: 0.8125rem;
+    font-weight: 600;
+  }
+
+  .backdrop { display: none; }
+
+  /* On desktop the empty view names its scope in the sidebar; the heading stays for assistive technology. */
+  @media (min-width: 768px) {
+    .topbar .scope-title {
+      position: absolute;
+      inline-size: 1px;
+      block-size: 1px;
+      padding: 0;
+      overflow: hidden;
+      clip-path: inset(50%);
+    }
+  }
+
+  @media (max-width: 767.98px) {
+    .shell, .shell.is-collapsed { grid-template-columns: minmax(0, 1fr); }
+
+    .sidebar {
+      position: fixed;
+      inset-block: 0;
+      inset-inline-start: 0;
+      z-index: 40;
+      inline-size: min(20rem, 86vw);
+      box-shadow: 0 0 2.5rem #0000004d;
+      transform: translateX(-100%);
+      visibility: hidden;
+      transition: transform 180ms ease-out, visibility 180ms;
+    }
+
+    .shell.drawer-open .sidebar { transform: none; visibility: visible; }
+
+    .shell.drawer-open .backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 30;
+      display: block;
+      background: light-dark(#18213366, #000000a3);
+    }
+
+    .topbar { padding: 0 0.5rem; }
+    .topbar h1 { flex: 1; text-align: center; }
+    .mobile-only { display: inline-grid; }
+    .scope-chip { display: none; }
+    .nav-item, .scope-menu a { min-block-size: 2.75rem; }
+    .history a { line-height: 1.75rem; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .sidebar { transition: none; }
+  }
+}

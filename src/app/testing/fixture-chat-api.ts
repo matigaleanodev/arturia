@@ -15,7 +15,31 @@ export const fixtureScopes = {
 
 const dataKey = 'arturia.fixture.chat';
 const scenarioKey = 'arturia.fixture.scenario';
-type Outcome = 'completed' | 'incomplete' | 'failed';
+type Outcome = 'completed' | 'incomplete' | 'failed' | 'markdown';
+
+/** Reply of the `markdown` scenario: every construct the reply renderer supports, plus unsafe input. */
+export const markdownReply = [
+  '## Plan para la mudanza',
+  '',
+  'Te propongo **tres etapas** con algo de _margen_ para lo imprevisto:',
+  '',
+  '1. Inventario y cajas',
+  '2. Servicios y trámites',
+  '   - Gas y electricidad',
+  '   - Internet, con `fecha de corte`',
+  '3. Traslado',
+  '',
+  '| Etapa | Semana | Responsable |',
+  '|:--|:-:|--:|',
+  '| Inventario | 1 | Vos |',
+  '| Trámites | 2 | Ambos |',
+  '',
+  '```ts',
+  'const semanas = 3;',
+  '```',
+  '',
+  'Más detalles en [la guía](https://example.com/guia) o <img src=x onerror=alert(1)> [esto](javascript:alert(1)).',
+].join('\n');
 
 interface FixtureTurn {
   readonly ref: ConversationRef;
@@ -73,7 +97,12 @@ function findTurn(data: FixtureData, ref: TurnRef): FixtureTurn {
 function snapshot(turn: FixtureTurn): TurnSnapshot {
   if (turn.cancelled) return turn.cancelled;
   const elapsed = Date.now() - turn.acceptedAt;
-  const status = elapsed < 450 ? 'queued' : elapsed < 2400 ? 'running' : turn.outcome;
+  const final = turn.outcome === 'markdown' ? 'completed' : turn.outcome;
+  const status = elapsed < 450 ? 'queued' : elapsed < 2400 ? 'running' : final;
+  if (turn.outcome === 'markdown') {
+    const text = status === 'queued' ? undefined : status === 'running' ? markdownReply.slice(0, 120) : markdownReply;
+    return { ...turn.ref, turnId: turn.turnId, status, lastSeq: text ? 1 : 0, ...(text ? { result: { text } } : {}) };
+  }
   const payload = status === 'running' && turn.outcome === 'failed'
     ? fixture.turnSnapshots.queued
     : fixture.turnSnapshots[status];
@@ -135,7 +164,7 @@ export class FixtureChatApi implements ChatApi {
       input,
       key,
       acceptedAt: Date.now(),
-      outcome: scenario === 'incomplete' || scenario === 'failed' ? scenario : 'completed',
+      outcome: scenario === 'incomplete' || scenario === 'failed' || scenario === 'markdown' ? scenario : 'completed',
     });
     saveData(data);
     if (scenario === 'lost-response') throw new TypeError('Synthetic acknowledgement lost');

@@ -1,0 +1,42 @@
+@layer components {
+  .login { display: grid; grid-template-rows: auto 1fr; flex: 1; min-block-size: 100%; }
+  app-home { display: flex; flex: 1; flex-direction: column; }
+  .login-top { display: flex; justify-content: flex-end; padding: 1rem; }
+
+  .theme-switch {
+    display: inline-flex;
+    gap: 0.125rem;
+    padding: 0.1875rem;
+    border: 1px solid var(--border-muted);
+    border-radius: 999px;
+    background: var(--surface-panel);
+  }
+
+  .theme-switch button {
+    display: grid;
+    place-items: center;
+    inline-size: 2.25rem;
+    block-size: 2.25rem;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--text-secondary);
+  }
+
+  .theme-switch button:hover { color: var(--text-main); }
+  .theme-switch button[aria-pressed='true'] { background: var(--state-selected); color: var(--action-text); }
+  .theme-switch .icon { inline-size: 1.125rem; block-size: 1.125rem; }
+
+  .login-center { display: grid; place-items: center; padding: 1.5rem 1.5rem 18vh; }
+  .login-card { display: grid; justify-items: center; gap: 1.5rem; inline-size: min(100%, 22rem); text-align: center; }
+  .login-card .mark { inline-size: 3rem; block-size: 3rem; }
+  .login-card h1 { font-size: 2rem; font-weight: 650; letter-spacing: -0.02em; }
+  .login-card p { margin-block-start: 0.25rem; color: var(--text-secondary); }
+  .login-card .button { inline-size: 100%; }
+  .login-card .note { font-size: 0.8125rem; }
+  .login-card .notice { color: var(--status-error); }
+
+  @media (max-width: 767.98px) {
+    .theme-switch button { inline-size: 2.75rem; block-size: 2.75rem; }
+  }
+}

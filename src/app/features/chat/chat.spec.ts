@@ -134,6 +134,7 @@ it('retires the inaccessible conversation while leaving its scope available', as
   let revoked = false;
   vi.stubGlobal('fetch', vi.fn(async (url: URL, request: RequestInit) => {
     request.signal?.throwIfAborted();
+    if (request.method === 'POST' && url.pathname.endsWith('/turns')) return new Response(null, { status: 409 });
     if (request.method === 'POST') return Response.json(created, { status: 201 });
     if (url.pathname.endsWith('/turns/vanished')) {
       revoked = true;
@@ -148,11 +149,12 @@ it('retires the inaccessible conversation while leaving its scope available', as
   store.open(personal.scopeId, personal.conversationId);
   await vi.waitFor(() => expect(store.error()).toContain('ya no está disponible'));
   expect(store.conversation()).toBeNull();
-  await expect(store.createConversation()).resolves.toEqual(created);
-  expect(store.creating()).toBe(false);
+  store.draft.set('Mensaje nuevo');
+  await expect(store.send()).resolves.toBe(created.conversationId);
+  expect(store.conversation()?.conversationId).toBe(created.conversationId);
   expect(store.sending()).toBe(false);
   expect(store.cancelling()).toBeNull();
-  expect(store.conversations()).toEqual([]);
+  expect(store.conversations()).toEqual([created]);
 });
 
 it('retries snapshot hydration after a terminal acknowledgement and a transient GET failure', async () => {

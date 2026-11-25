@@ -19,7 +19,8 @@ import {
 
 interface ChatContext {
   readonly scopeId: string;
-  readonly conversationId: string | null;
+  /** Null until a conversation is opened or created with the first message. */
+  conversationId: string | null;
   readonly controller: AbortController;
   readonly followers: Map<string, AbortController>;
 }
@@ -67,7 +68,7 @@ export class ChatStore {
   private readonly notice = signal<{ kind: NoticeKind; text: string } | null>(null);
   private readonly loadingHistory = signal(false);
   private readonly loadingConversation = signal(false);
-  private readonly creatingConversation = signal(false);
+  private readonly requested = signal<string | null>(null);
   private readonly sendingMessage = signal(false);
   private readonly cancellingTurn = signal<string | null>(null);
 
@@ -78,13 +79,25 @@ export class ChatStore {
   readonly error = computed(() => this.notice()?.text);
   readonly historyLoading = this.loadingHistory.asReadonly();
   readonly conversationLoading = this.loadingConversation.asReadonly();
-  readonly creating = this.creatingConversation.asReadonly();
   readonly sending = this.sendingMessage.asReadonly();
   readonly cancelling = this.cancellingTurn.asReadonly();
-  readonly hasActiveTurn = computed(() => this.detail()?.turns.some(({ snapshot }) =>
-    active(snapshot.status),
-  ) ?? false);
+  /** The turn that the composer's stop action cancels. */
+  readonly activeTurnId = computed(() => {
+    const turns = this.detail()?.turns ?? [];
+    for (let index = turns.length - 1; index >= 0; index--) {
+      const { snapshot } = turns[index]!;
+      if (active(snapshot.status)) return snapshot.turnId;
+    }
+    return null;
+  });
+  readonly hasActiveTurn = computed(() => this.activeTurnId() !== null);
   readonly draft = signal('');
+  /** A requested conversation that failed to open never becomes a new one implicitly. */
+  private readonly ready = computed(() => !this.loadingConversation() &&
+    (this.requested() === null || this.detail()?.conversationId === this.requested()));
+  readonly canSend = computed(() =>
+    !!this.draft().trim() && !this.sending() && !this.hasActiveTurn() && this.ready(),
+  );
 
   constructor() {
     inject(DestroyRef).onDestroy(() => this.context?.controller.abort());
@@ -92,6 +105,13 @@ export class ChatStore {
     effect(() => {
       if (!this.auth.accessToken()) this.context?.controller.abort();
     });
+  }
+
+  /** Whether the live state already shows this conversation, as after the first message creates it. */
+  isOpen(scopeId: string, conversationId: string | null): boolean {
+    const current = this.context;
+    return !!current && this.isCurrent(current) &&
+      current.scopeId === scopeId && current.conversationId === conversationId;
   }
 
   open(scopeId: string, conversationId: string | null): void {
@@ -112,7 +132,7 @@ export class ChatStore {
     this.notice.set(null);
     this.loadingHistory.set(true);
     this.loadingConversation.set(conversationId !== null);
-    this.creatingConversation.set(false);
+    this.requested.set(conversationId);
     this.sendingMessage.set(false);
     this.cancellingTurn.set(null);
 
@@ -120,38 +140,56 @@ export class ChatStore {
     if (conversationId !== null) void this.loadConversation(context, conversationId);
   }
 
-  async createConversation(): Promise<ConversationSummary | undefined> {
+  /**
+   * Sends the draft. Without an open conversation, the first message creates one in the current scope.
+   * Resolves to the created conversation ID so the caller can reflect it in the route, even when the
+   * message itself still has to be retried.
+   */
+  async send(): Promise<string | undefined> {
     const context = this.context;
-    if (!context || this.creating()) return undefined;
-
-    this.creatingConversation.set(true);
-    this.clearNotice('create');
-    try {
-      const created = await this.api.createConversation(
-        context.scopeId,
-        {},
-        context.controller.signal,
-      );
-      if (this.isCurrent(context) && created.scopeId === context.scopeId) return created;
-    } catch {
-      if (this.isCurrent(context)) this.showNotice('create', 'No se pudo crear la conversación.');
-    } finally {
-      if (this.isCurrent(context)) this.creatingConversation.set(false);
-    }
-    return undefined;
-  }
-
-  async send(): Promise<void> {
-    const context = this.context;
-    const conversationId = this.detail()?.conversationId;
     const text = this.draft().trim();
-    if (!context || !conversationId || !text || this.sending() || this.hasActiveTurn()) return;
+    if (!context || !this.canSend()) return undefined;
 
-    const intent = this.intent() ?? { text, key: crypto.randomUUID() };
-    this.intent.set(intent);
     this.sendingMessage.set(true);
     this.clearNotice('send');
+    this.clearNotice('create');
+    let created: string | undefined;
+    try {
+      if (context.conversationId === null) {
+        const summary = await this.createConversation(context);
+        if (!summary) return undefined;
+        created = summary.conversationId;
+      }
+      await this.acceptIntent(context, context.conversationId!, text);
+    } finally {
+      if (this.isCurrent(context)) this.sendingMessage.set(false);
+    }
+    return created;
+  }
 
+  private async createConversation(context: ChatContext): Promise<ConversationSummary | undefined> {
+    try {
+      const summary = await this.api.createConversation(context.scopeId, {}, context.controller.signal);
+      if (!this.isCurrent(context)) return undefined;
+      if (summary.scopeId !== context.scopeId || !summary.conversationId) {
+        throw new Error('Conversation does not match its scope');
+      }
+      context.conversationId = summary.conversationId;
+      this.requested.set(summary.conversationId);
+      this.detail.set({ ...summary, turns: [] });
+      this.history.update((list) => [summary, ...list.filter(({ conversationId }) =>
+        conversationId !== summary.conversationId,
+      )]);
+      return summary;
+    } catch {
+      if (this.isCurrent(context)) this.showNotice('create', 'No se pudo crear la conversación.');
+      return undefined;
+    }
+  }
+
+  private async acceptIntent(context: ChatContext, conversationId: string, text: string): Promise<void> {
+    const intent = this.intent() ?? { text, key: crypto.randomUUID() };
+    this.intent.set(intent);
     try {
       const { turnId, status } = await this.api.acceptTurn(
         { scopeId: context.scopeId, conversationId },
@@ -181,8 +219,6 @@ export class ChatStore {
       } else {
         this.showNotice('send', 'No se pudo confirmar el envío. Podés reintentar.');
       }
-    } finally {
-      if (this.isCurrent(context)) this.sendingMessage.set(false);
     }
   }
 
@@ -211,7 +247,12 @@ export class ChatStore {
     try {
       const history = await this.api.listConversations(context.scopeId, context.controller.signal);
       if (!this.isCurrent(context)) return;
-      this.history.set(history.conversations.filter(({ scopeId }) => scopeId === context.scopeId));
+      const listed = history.conversations.filter(({ scopeId }) => scopeId === context.scopeId);
+      // A conversation created while the list was in flight may be missing from it.
+      const local = this.history().filter(({ conversationId }) =>
+        !listed.some((item) => item.conversationId === conversationId),
+      );
+      this.history.set([...local, ...listed]);
     } catch {
       if (this.isCurrent(context)) this.showNotice('history', 'No se pudo consultar el historial.');
     } finally {

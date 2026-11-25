@@ -18,12 +18,12 @@ test.beforeEach(async ({ context, baseURL }) => {
 
 async function accept(page: Page) {
   await page.goto('/chat?scope=personal');
-  await page.getByRole('button', { name: 'Nueva conversación' }).click();
   await page.getByRole('textbox', { name: 'Mensaje' }).fill('Consulta sintética integrada');
   const response = page.waitForResponse(r => r.url().startsWith(api + '/') &&
     r.url().endsWith('/turns') && r.request().method() === 'POST');
   await page.getByRole('button', { name: 'Enviar' }).click();
   const accepted = await response;
+  await expect(page).toHaveURL(/[?&]conversation=/);
   expect(accepted.status()).toBe(202);
   const { turnId, status } = await accepted.json() as TurnAccepted;
   expect(status).toBe('queued');
@@ -68,9 +68,9 @@ test('restored_conversation_has_one_answer', async ({ page, context, request }) 
   const history = await (await detail).json() as ConversationDetail;
   expect(history.turns.map(t => t.snapshot.turnId)).toEqual([turnId]);
   expect(['queued', 'running']).toContain(history.turns[0]?.snapshot.status);
-  await expect(reopened.getByRole('button', { name: 'Cancelar respuesta' })).toBeVisible();
+  await expect(reopened.getByRole('button', { name: 'Detener respuesta' })).toBeVisible();
   await release(turnId);
-  await expect(reopened.getByText('Respuesta completa', { exact: true })).toBeVisible();
+  await expect(reopened.getByRole('status').filter({ hasText: 'Respuesta completa' })).toHaveCount(1);
   await expect(reopened.getByRole('article')).toHaveCount(1);
   await expect(reopened.getByText(answer, { exact: true })).toHaveCount(1);
   expect((await snapshot(request, turnId)).status).toBe('completed');

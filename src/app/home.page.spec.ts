@@ -10,9 +10,13 @@ import { APP_OPTIONS } from './core/app-options';
 import { AuthSession } from './core/auth/auth-session';
 import { RUNTIME_CONFIG_PATH } from './core/runtime-config';
 
+const signInButton = (root: Element | null) =>
+  [...root?.querySelectorAll('button') ?? []].find((button) => button.textContent?.includes('Iniciar sesión'));
+
 afterEach(() => {
   TestBed.resetTestingModule();
   sessionStorage.clear();
+  localStorage.clear();
   vi.unstubAllGlobals();
 });
 
@@ -32,7 +36,7 @@ it('missing_runtime_config_disables_login_with_visible_error', async () => {
 
   expect(content?.querySelector('main h1')?.textContent?.trim()).toBe('Arturia');
   expect(content?.querySelector('[role="alert"]')?.textContent).toContain('Falta la configuración publicada');
-  expect(content?.querySelector('button')).toBeNull();
+  expect(signInButton(content)).toBeUndefined();
   expect(content?.textContent).not.toContain('Modo de prueba');
   expect(TestBed.inject(AuthSession).accessToken()).toBeNull();
 
@@ -54,12 +58,13 @@ it('names an invalid or unreachable configuration without exposing its values', 
     });
     const harness = await RouterTestingHarness.create('/');
     expect(harness.routeNativeElement?.querySelector('[role="alert"]')?.textContent).toContain(message);
-    expect(harness.routeNativeElement?.querySelector('button')).toBeNull();
+    expect(signInButton(harness.routeNativeElement)).toBeUndefined();
     TestBed.resetTestingModule();
   }
 });
 
-it('removes the authorization code from the URL before showing the signed-in scopes', async () => {
+it('removes the authorization code from the URL and then opens the scope used last', async () => {
+  localStorage.setItem('arturia.scope', 'work');
   const accessToken = signal<string | null>(null);
   const complete = vi.fn(async () => { accessToken.set('synthetic-access-token'); });
   TestBed.configureTestingModule({
@@ -70,12 +75,16 @@ it('removes the authorization code from the URL before showing the signed-in sco
     ],
   });
 
-  const harness = await RouterTestingHarness.create('/?code=synthetic-code&state=synthetic-state');
-  await vi.waitFor(() => expect(TestBed.inject(Router).url).toBe('/'));
-  harness.detectChanges();
+  const router = TestBed.inject(Router);
+  const urls: string[] = [];
+  router.events.subscribe(() => urls.push(router.url));
+  await RouterTestingHarness.create('/?code=synthetic-code&state=synthetic-state');
+  await vi.waitFor(() => expect(router.url).toBe('/chat?scope=work'));
 
   expect(complete).toHaveBeenCalledExactlyOnceWith(
     new URLSearchParams({ code: 'synthetic-code', state: 'synthetic-state' }),
   );
-  expect(harness.routeNativeElement?.textContent).toContain('Elegí un ámbito');
+  // The callback parameters are dropped before the chat opens.
+  expect(urls.indexOf('/')).toBeLessThan(urls.indexOf('/chat?scope=work'));
+  expect(urls.indexOf('/')).toBeGreaterThanOrEqual(0);
 });

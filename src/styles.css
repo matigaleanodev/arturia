@@ -1,5 +1,11 @@
 @import "tailwindcss";
-@import "./app/features/chat/chat.page.css";
+@import "./styles/base.css";
+@import "./styles/shell.css";
+@import "./styles/conversation.css";
+@import "./styles/markdown.css";
+@import "./styles/composer.css";
+@import "./styles/settings.css";
+@import "./styles/access.css";
 
 @theme inline {
   --color-canvas: var(--surface-canvas);
@@ -17,13 +23,13 @@
   --color-success: var(--status-success);
   --color-warning: var(--status-warning);
   --color-info: var(--status-info);
-  --font-display: var(--type-display);
   --font-sans: var(--type-body);
   --radius-control: var(--shape-control);
   --radius-panel: var(--shape-panel);
   --shadow-panel: var(--depth-panel);
 }
 
+/* Saber (light) and Saber Alter (dark): approved palettes, unchanged. */
 :root {
   color-scheme: light dark;
   --surface-canvas: light-dark(#f6f7fb, #101015);
@@ -50,198 +56,25 @@
   --status-error: light-dark(#9b2946, #ffb48d);
   --status-error-surface: light-dark(#fff1f3, #35251f);
   --status-info: light-dark(#285f85, #a1caef);
-  --type-body: system-ui, sans-serif;
-  --type-display: "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
-  --gutter: clamp(1rem, 4vw, 3rem);
-  --measure: 47rem;
+  --depth-panel: 0 0.4rem 1.6rem light-dark(#233d7020, #00000036);
   --shape-control: 0.625rem;
   --shape-panel: 1.125rem;
-  --depth-panel: 0 0.4rem 1.6rem light-dark(#233d7020, #00000036);
+  --shape-composer: 1.5rem;
   --motion-time: 130ms;
   --motion-easing: ease-out;
+
+  /* One system sans for the whole interface, brand included. */
+  --type-body: "Segoe UI Variable Text", "Segoe UI", "Ubuntu Sans", system-ui, sans-serif;
+  --type-code: ui-monospace, "Cascadia Code", "Ubuntu Sans Mono", Consolas, monospace;
+  --measure: 48rem;
+  --gutter: clamp(1rem, 3vw, 2rem);
+  --sidebar-width: 17rem;
+  --rail-width: 3.75rem;
+  --composer-line: 1.5rem;
 }
 
 :root[data-theme='light'] { color-scheme: light; }
 :root[data-theme='dark'] { color-scheme: dark; }
-
-@layer base {
-  html {
-    color: var(--text-main);
-    background: var(--surface-canvas);
-    scrollbar-color: var(--border-control) var(--surface-canvas);
-  }
-
-  body { min-block-size: 100dvh; }
-  app-root { display: block; }
-  button:enabled, select { cursor: pointer; }
-  a, button, select { -webkit-tap-highlight-color: transparent; }
-
-  :focus-visible {
-    outline: 2px solid var(--state-focus);
-    outline-offset: 3px;
-  }
-
-  ::selection {
-    color: var(--text-main);
-    background: var(--state-selected);
-  }
-}
-
-@layer components {
-  .button, .scope-switcher a, .theme-control select {
-    min-block-size: 2.75rem;
-    border: 1px solid var(--border-control);
-    border-radius: var(--shape-control);
-    color: var(--text-main);
-    background: var(--surface-panel);
-    font-size: 0.875rem;
-    font-weight: 600;
-    transition: background-color var(--motion-time) var(--motion-easing);
-  }
-
-  .button, .scope-switcher a {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.4rem;
-    padding: 0.5rem 0.85rem;
-  }
-
-  .button:enabled:hover, .scope-switcher a:hover, .theme-control select:hover { background: var(--state-hover); }
-  .button:enabled:active, .scope-switcher a:active { background: var(--state-active); }
-
-  .button-primary {
-    color: var(--action-on-fill);
-    background: var(--action-fill);
-    border-color: var(--action-text);
-  }
-
-  .button-primary:enabled:hover { background: var(--action-hover); }
-  .button-primary:enabled:active { background: var(--action-active); }
-
-  .button:disabled {
-    color: var(--text-disabled);
-    background: var(--surface-elevated);
-    border-color: var(--border-muted);
-    cursor: default;
-  }
-
-  .scope-switcher {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.25rem;
-  }
-
-  .scope-switcher a {
-    border-color: transparent;
-    background: transparent;
-    text-decoration: none;
-  }
-
-  .scope-switcher a[aria-current='page'] {
-    color: var(--action-text);
-    background: var(--state-selected);
-    border-color: var(--action-text);
-  }
-
-  .home .scope-switcher a {
-    border-color: var(--border-control);
-    background: var(--surface-panel);
-  }
-
-  .home .scope-switcher a:hover { background: var(--state-hover); }
-
-  .theme-control {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.55rem;
-    color: var(--text-secondary);
-    font-size: 0.8125rem;
-    font-weight: 600;
-  }
-
-  .theme-control select {
-    max-inline-size: 100%;
-    padding-inline: 0.55rem;
-  }
-
-  .crest {
-    position: relative;
-    display: inline-grid;
-    place-items: center;
-    flex: none;
-    inline-size: 1.85rem;
-    block-size: 1.85rem;
-    background: var(--action-fill);
-    border: 1px solid var(--action-text);
-    border-radius: 0.4rem;
-  }
-
-  .crest::before {
-    content: '';
-    inline-size: 42%;
-    aspect-ratio: 1;
-    border: 1px solid var(--accent-detail);
-    transform: rotate(45deg);
-  }
-
-  .crest::after {
-    content: '';
-    position: absolute;
-    inline-size: 1px;
-    block-size: 58%;
-    background: var(--accent-detail);
-  }
-
-  .crest-large {
-    inline-size: 3rem;
-    block-size: 3rem;
-    border-radius: var(--shape-control);
-  }
-
-  .notice {
-    padding: 0.75rem 0.9rem;
-    border-inline-start: 3px solid var(--status-error);
-    border-radius: 0 var(--shape-control) var(--shape-control) 0;
-    color: var(--status-error);
-    background: var(--status-error-surface);
-    overflow-wrap: anywhere;
-  }
-
-  .home-tools { padding: 1rem var(--gutter); }
-
-  .home {
-    display: grid;
-    align-content: center;
-    max-inline-size: 43rem;
-    min-block-size: 65dvh;
-    margin-inline: auto;
-    padding: 1rem var(--gutter) 2rem;
-  }
-
-  .home-panel {
-    padding: clamp(1.5rem, 7vw, 3.25rem);
-    background: var(--surface-panel);
-    border: 1px solid var(--border-muted);
-    border-block-start: 2px solid var(--accent-detail);
-    border-radius: var(--shape-panel);
-    box-shadow: var(--depth-panel);
-  }
-
-  .home-title {
-    font-size: clamp(3rem, 10vw, 4.7rem);
-    line-height: 0.98;
-    letter-spacing: -0.055em;
-  }
-
-  .test-mode {
-    padding: 0.25rem 1rem;
-    border-block-end: 1px solid var(--border-muted);
-    color: var(--text-secondary);
-    text-align: center;
-    font-size: 0.75rem;
-  }
-}
 
 @media (prefers-reduced-motion: reduce) {
   :root { --motion-time: 0ms; }

@@ -1,0 +1,96 @@
+@layer components {
+  .md {
+    display: grid;
+    gap: 0.875rem;
+    min-inline-size: 0;
+    font-size: 1rem;
+    line-height: 1.7;
+    overflow-wrap: anywhere;
+  }
+
+  .md :is(h2, h3, h4, h5, h6) { margin-block-start: 0.5rem; line-height: 1.35; font-weight: 650; letter-spacing: -0.01em; }
+  .md .md-h1 { font-size: 1.3125rem; }
+  .md .md-h2 { font-size: 1.1875rem; }
+  .md .md-h3 { font-size: 1.0625rem; }
+  .md .md-h4 { font-size: 1rem; }
+  .md > :first-child { margin-block-start: 0; }
+
+  .md :is(ul, ol) { display: grid; gap: 0.375rem; padding-inline-start: 1.5rem; }
+  .md ul { list-style: disc; }
+  .md ol { list-style: decimal; }
+  .md li { padding-inline-start: 0.125rem; }
+  .md li::marker { color: var(--text-secondary); }
+  .md li > :is(ul, ol) { margin-block-start: 0.375rem; }
+  .md li > p + p, .md li > p + .md-code { margin-block-start: 0.5rem; }
+  .md :is(ul ul) { list-style: circle; }
+
+  .md strong { font-weight: 650; }
+  .md del { color: var(--text-secondary); }
+
+  .md a {
+    color: var(--action-text);
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.18em;
+  }
+
+  .md a:hover { text-decoration-thickness: 2px; }
+
+  .md code {
+    padding: 0.1em 0.35em;
+    border-radius: 0.375rem;
+    background: var(--surface-elevated);
+    font-family: var(--type-code);
+    font-size: 0.875em;
+  }
+
+  .md-code {
+    min-inline-size: 0;
+    border: 1px solid var(--border-muted);
+    border-radius: 0.75rem;
+    background: var(--surface-rail);
+  }
+
+  .md-code-lang {
+    display: block;
+    padding: 0.5rem 0.875rem 0;
+    color: var(--text-secondary);
+    font-size: 0.8125rem;
+  }
+
+  .md pre {
+    padding: 0.75rem 0.875rem;
+    overflow-x: auto;
+    scrollbar-width: thin;
+    line-height: 1.55;
+  }
+
+  .md-code-lang + pre { padding-block-start: 0.25rem; }
+  .md pre code { padding: 0; background: none; font-size: 0.875rem; white-space: pre; overflow-wrap: normal; }
+  .md pre:focus-visible, .md-table:focus-visible { outline-offset: -2px; }
+
+  .md blockquote {
+    display: grid;
+    gap: 0.625rem;
+    padding-inline-start: 1rem;
+    border-inline-start: 3px solid var(--border-muted);
+    color: var(--text-secondary);
+  }
+
+  .md hr { border: 0; border-block-start: 1px solid var(--border-muted); }
+
+  .md-table {
+    max-inline-size: 100%;
+    overflow-x: auto;
+    border: 1px solid var(--border-muted);
+    border-radius: 0.75rem;
+    scrollbar-width: thin;
+  }
+
+  .md table { inline-size: max-content; min-inline-size: 100%; border-collapse: collapse; font-size: 0.9375rem; line-height: 1.5; }
+  .md :is(th, td) { padding: 0.5rem 0.875rem; border-block-start: 1px solid var(--border-muted); overflow-wrap: normal; }
+  .md thead th { border-block-start: 0; background: var(--surface-rail); font-weight: 600; }
+  .md .align-start, .md .align-left { text-align: start; }
+  .md .align-center { text-align: center; }
+  .md .align-right { text-align: end; }
+}

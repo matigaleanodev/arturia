@@ -256,7 +256,7 @@ test('local_dist_has_no_csp_violations', async ({ page }) => {
 
     await test.step('access screen and theme change', async () => {
       await expect(page.getByRole('button', { name: 'Iniciar sesión' })).toBeVisible();
-      await page.getByRole('combobox', { name: 'Tema' }).selectOption('light');
+      await page.getByRole('group', { name: 'Tema' }).getByRole('button', { name: 'Claro' }).click();
       await expect(theme).toHaveAttribute('data-theme', 'light');
       expect(await page.evaluate(() => localStorage.getItem('arturia.theme'))).toBe('light');
       await csp.expectNoViolations();
@@ -264,7 +264,8 @@ test('local_dist_has_no_csp_violations', async ({ page }) => {
 
     await test.step('sign-in with PKCE against the synthetic Cognito', async () => {
       await page.getByRole('button', { name: 'Iniciar sesión' }).click();
-      await expect(page.getByRole('link', { name: 'Personal', exact: true })).toBeVisible();
+      await expect(page).toHaveURL(`${web}/chat?scope=personal`);
+      await expect(page.getByRole('textbox', { name: 'Mensaje' })).toBeVisible();
       expect(exchanges).toHaveLength(1);
       expect(exchanges[0]!.get('grant_type')).toBe('authorization_code');
       expect(exchanges[0]!.get('code')).toBe('synthetic-code');
@@ -273,33 +274,39 @@ test('local_dist_has_no_csp_violations', async ({ page }) => {
     });
 
     await test.step('chat: history, new conversation, streamed reply and scope change', async () => {
-      await page.getByRole('link', { name: 'Personal', exact: true }).click();
       const messages = page.getByRole('region', { name: 'Mensajes' });
-      await page.getByRole('navigation', { name: 'Historial' })
+      const status = page.getByRole('status').filter({ hasText: /Respuesta/ });
+      await page.getByRole('navigation', { name: 'Conversaciones' })
         .getByRole('link', { name: fixtures.getConversation.title }).click();
       await expect(messages).toContainText(fixtures.turnSnapshots.completed.result.text);
 
-      await page.getByRole('button', { name: 'Nueva conversación' }).click();
-      await expect(page).toHaveURL(/[?&]conversation=created-/);
-      await expect(messages.getByRole('status')).toHaveCount(0);
+      await page.getByRole('link', { name: 'Nueva conversación', exact: true }).click();
+      await expect(page).toHaveURL(`${web}/chat?scope=personal`);
+      await expect(status).toHaveCount(0);
       await page.getByRole('textbox', { name: 'Mensaje' }).fill(fixtures.acceptTurn.request.text);
       await page.getByRole('button', { name: 'Enviar' }).click();
+      await expect(page).toHaveURL(/[?&]conversation=created-/);
       await expect(messages).toContainText(fixtures.acceptTurn.request.text);
       await expect(messages).toContainText(fixtures.turnSnapshots.completed.result.text);
-      await expect(messages.getByRole('status')).toHaveText('Respuesta completa');
+      await expect(status).toHaveText('Respuesta completa');
+      await expect(messages.getByRole('heading', { level: 3 }).or(messages.locator('p'))).not.toHaveCount(0);
       expect(streams.length, 'the reply arrives through SSE').toBeGreaterThan(0);
 
-      await page.getByRole('navigation', { name: 'Ámbitos' }).getByRole('link', { name: 'Laboral' }).click();
-      await expect(page.getByRole('heading', { name: 'Conversaciones del ámbito Laboral' })).toBeVisible();
+      await page.getByRole('button', { name: 'Ámbito: Personal' }).click();
+      await page.getByRole('link', { name: 'Laboral' }).click();
+      await expect(page.getByRole('heading', { name: 'Laboral', level: 1 })).toBeAttached();
       await expect(page.getByText('Todavía no hay conversaciones.')).toBeVisible();
     });
 
-    await test.step('theme change inside the chat persists across a deep-link reload', async () => {
-      await page.getByRole('combobox', { name: 'Tema' }).selectOption('dark');
+    await test.step('theme change in Configuración persists across a deep-link reload', async () => {
+      await page.getByRole('link', { name: 'Configuración' }).click();
+      await page.getByRole('radio', { name: /Oscuro/ }).check();
       await expect(theme).toHaveAttribute('data-theme', 'dark');
+      await page.getByRole('link', { name: 'Volver al chat' }).click();
+      await expect(page).toHaveURL(`${web}/chat?scope=work`);
       await page.reload();
       await expect(theme).toHaveAttribute('data-theme', 'dark');
-      await expect(page.getByRole('heading', { name: 'Conversaciones del ámbito Laboral' })).toBeVisible();
+      await expect(page.getByRole('heading', { name: 'Laboral', level: 1 })).toBeAttached();
     });
   } catch (error) {
     // A blocked request often surfaces as a functional failure: report the recorded violation, else the original error.

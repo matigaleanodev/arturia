@@ -12,15 +12,15 @@ const replyTimeoutMs = 90_000;
 const minLeadMs = 500;
 const terminalStatuses = new Set(['completed', 'incomplete', 'failed', 'cancelled', 'blocked']);
 
-/** Records every change of the newest reply's live region: active state (aria-busy) and visible text length. */
+/** Records every change of the newest reply body: active state (aria-busy) and visible text length. */
 async function watchReply(page: Page): Promise<void> {
   await page.evaluate(() => {
     const samples: { at: number; busy: boolean; length: number }[] = [];
     Reflect.set(window, 'arturiaReplySamples', samples);
-    const messages = document.querySelector('[role="region"][aria-label="Mensajes"]');
-    if (!messages) throw new Error('Messages region not found');
+    // The first message creates the conversation, so the messages region appears after sending.
     const record = () => {
-      const live = [...messages.querySelectorAll('[aria-live]')].at(-1);
+      const messages = document.querySelector('[role="region"][aria-label="Mensajes"]');
+      const live = messages ? [...messages.querySelectorAll('[aria-busy]')].at(-1) : undefined;
       if (live) {
         samples.push({
           at: Date.now(),
@@ -29,7 +29,7 @@ async function watchReply(page: Page): Promise<void> {
         });
       }
     };
-    new MutationObserver(record).observe(messages, {
+    new MutationObserver(record).observe(document.body, {
       subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['aria-busy'],
     });
   });
@@ -100,14 +100,13 @@ test('deployed_browser_displays_blocks_before_terminal', async ({ browser }) => 
     });
 
     await test.step('a new turn shows its blocks before the terminal status', async () => {
-      await page.getByRole('button', { name: 'Nueva conversación' }).click();
-      await expect(page).toHaveURL(/[?&]conversation=/);
       await page.getByRole('textbox', { name: 'Mensaje' }).fill('Prueba automatizada de streaming del piloto.');
       await watchReply(page);
       const sentAt = Date.now();
       await page.getByRole('button', { name: 'Enviar' }).click();
+      await expect(page, 'the first message creates the conversation').toHaveURL(/[?&]conversation=/);
 
-      const reply = page.getByRole('region', { name: 'Mensajes' }).locator('[aria-live]').last();
+      const reply = page.getByRole('region', { name: 'Mensajes' }).locator('[aria-busy]').last();
       await expect(reply, 'the turn reaches a terminal status').toHaveAttribute('aria-busy', 'false', { timeout: replyTimeoutMs });
       await Promise.all(pending);
       const samples = await page.evaluate(() => Reflect.get(window, 'arturiaReplySamples') as Sample[]);

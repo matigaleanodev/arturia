@@ -26,7 +26,8 @@ const inlineScripts = [...index.matchAll(/<script\b([^>]*)>/gi)].filter(([, attr
 assert.deepEqual(inlineScripts.map(([tag]) => tag), [], 'index.html must not contain inline scripts');
 assert.ok(!/<[^>]+\son[a-z]+\s*=/i.test(index), 'index.html must not contain inline event handlers');
 // The hosting caches scripts, styles and media as immutable: each one needs a content hash in its name.
+// Entry files carry base32 hashes, while lazy chunks can carry base64url ones (for example chunk-Dk_SasX8.js).
 const unhashed = files.map(file => file.split('\\').join('/'))
   .filter(file => /\.(js|css)$/.test(file) || file.startsWith('media/'))
-  .filter(file => !/-[A-Z0-9]{8}\.[A-Za-z0-9]+$/.test(file));
+  .filter(file => !/-[A-Za-z0-9_-]{8}\.[A-Za-z0-9]+$/.test(file));
 assert.deepEqual(unhashed, [], 'Scripts, styles and media must carry a content hash');

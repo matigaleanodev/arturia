@@ -1,11 +1,12 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 
 import { APP_OPTIONS } from './core/app-options';
 import { AuthSession } from './core/auth/auth-session';
 import type { RuntimeConfigError } from './core/runtime-config';
-import { ThemeSelect } from './core/theme/theme-select';
-import { ScopeSwitcher } from './features/scopes/scope-switcher';
+import { ThemeSwitch } from './core/theme/theme-switch';
+import { lastScope } from './features/scopes/scope-switcher';
+import { BrandMark } from './shared/icon';
 
 const configErrors: Record<RuntimeConfigError, string> = {
   missing: 'Falta la configuración publicada.',
@@ -13,38 +14,39 @@ const configErrors: Record<RuntimeConfigError, string> = {
   unreachable: 'No se pudo obtener la configuración.',
 };
 
+/** Sign-in screen. With a session it opens the scope used last in this browser. */
 @Component({
   selector: 'app-home',
-  imports: [ScopeSwitcher, ThemeSelect],
+  imports: [ThemeSwitch, BrandMark],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <header class="home-tools flex justify-end"><app-theme-select /></header>
-    <main class="home">
-      <div class="home-panel grid justify-items-start gap-5">
-        <span class="crest crest-large" aria-hidden="true"></span>
-        <div class="grid gap-2">
-          <h1 class="home-title font-display">Arturia</h1>
-          <p class="text-subtle">Asistente personal</p>
-        </div>
-        <div class="grid justify-items-start gap-3">
+    <div class="login">
+      <header class="login-top"><app-theme-switch /></header>
+      <main class="login-center">
+        <div class="login-card">
+          <app-brand-mark />
+          <div>
+            <h1>Arturia</h1>
+            <p>Asistente personal</p>
+          </div>
           @if (busy()) {
             <p role="status">Iniciando sesión…</p>
           } @else if (auth.accessToken()) {
-            <p>Elegí un ámbito para abrir su historial.</p>
-            <app-scope-switcher />
+            <p role="status">Abriendo tus conversaciones…</p>
           } @else if (auth.signInAvailable) {
             <button class="button button-primary" type="button" (click)="signIn()">Iniciar sesión</button>
+            <p class="note">Vas a ingresar con tu cuenta y un código de verificación.</p>
           } @else if (configError) {
             <p class="notice" role="alert">{{ configError }} El inicio de sesión está deshabilitado.</p>
           } @else {
-            <p>El inicio de sesión todavía no está configurado.</p>
+            <p class="note">El inicio de sesión todavía no está configurado.</p>
           }
           @if (error()) {
             <p class="notice" role="alert">{{ error() }}</p>
           }
         </div>
-      </div>
-    </main>
+      </main>
+    </div>
   `,
 })
 export class HomePage {
@@ -58,15 +60,22 @@ export class HomePage {
     const route = inject(ActivatedRoute);
     const router = inject(Router);
     const params = route.snapshot.queryParamMap;
-    if (params.has('code') || params.has('error') || params.has('state')) {
-      const callback = new URLSearchParams();
+    const callback = params.has('code') || params.has('error') || params.has('state');
+    if (callback) {
+      const values = new URLSearchParams();
       for (const key of params.keys) {
-        for (const value of params.getAll(key)) callback.append(key, value);
+        for (const value of params.getAll(key)) values.append(key, value);
       }
       void router.navigate([], { relativeTo: route, queryParams: {}, replaceUrl: true });
       this.busy.set(true);
-      void this.completeSignIn(callback);
+      void this.completeSignIn(values);
     }
+
+    effect(() => {
+      if (this.auth.accessToken() && !this.busy()) {
+        void router.navigate(['/chat'], { queryParams: { scope: lastScope().key }, replaceUrl: true });
+      }
+    });
   }
 
   protected async signIn(): Promise<void> {

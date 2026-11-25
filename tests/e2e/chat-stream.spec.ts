@@ -57,20 +57,18 @@ test('shows progress and resumes without duplicating text', async ({ page, conte
   await page.clock.install({ time: new Date('2026-01-01T00:00:00Z') });
   await page.addInitScript(() => sessionStorage.setItem('arturia.fixture.stream', 'true'));
   await page.goto('/');
-  await page.getByRole('link', { name: 'Personal', exact: true }).click();
-  await page.getByRole('button', { name: 'Nueva conversación' }).click();
   await page.getByRole('textbox', { name: 'Mensaje' }).fill('Mensaje de streaming');
   await page.getByRole('button', { name: 'Enviar', exact: true }).click();
 
   try {
     await expect(page.getByText(partial, { exact: true })).toBeVisible();
-    await expect(page.getByText('Respuesta completa', { exact: true })).toHaveCount(0);
+    await expect(page.getByRole('status').filter({ hasText: 'Respuesta completa' })).toHaveCount(0);
     expect(cursors[0]).toBe('0');
     await page.clock.fastForward(3_000);
     await expect.poll(() => cursors).toEqual(['0', '1']);
     releaseFinal();
     await expect(page.getByText(final, { exact: true })).toHaveCount(1);
-    await expect(page.getByText('Respuesta completa', { exact: true })).toBeVisible();
+    await expect(page.getByRole('status').filter({ hasText: 'Respuesta completa' })).toHaveCount(1);
     expect(unexpected).toEqual([]);
   } finally {
     releaseFinal();
