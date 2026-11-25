@@ -9,6 +9,8 @@ export abstract class AuthSession {
   abstract begin(): Promise<URL>;
   abstract complete(callback: URLSearchParams): Promise<void>;
   abstract clear(): void;
+  /** Ends the local session and returns the hosted logout page to visit, when one is configured. */
+  abstract signOut(): URL | null;
 }
 
 const transactionKey = 'arturia.oauth.transaction';
@@ -76,6 +78,8 @@ export class BrowserAuthSession implements AuthSession {
   private readonly authorizationEndpoint = httpsUrl(this.oauth?.authorizationEndpoint);
   private readonly tokenEndpoint = httpsUrl(this.oauth?.tokenEndpoint);
   private readonly redirectUri = httpsUrl(this.oauth?.redirectUri);
+  private readonly logoutEndpoint = httpsUrl(this.oauth?.logoutEndpoint);
+  private readonly logoutUri = httpsUrl(this.oauth?.logoutUri);
   private readonly token = signal<string | null>(null);
   private expiryTimer?: ReturnType<typeof setTimeout>;
 
@@ -190,6 +194,22 @@ export class BrowserAuthSession implements AuthSession {
     clearTimeout(this.expiryTimer);
     this.token.set(null);
     sessionStorage.removeItem(sessionKey);
+  }
+
+  signOut(): URL | null {
+    this.clear();
+    sessionStorage.removeItem(transactionKey);
+    // Same rules as sign-in: the hosted pages share one origin and the browser returns to this root.
+    if (
+      !this.signInAvailable || !this.oauth || !this.logoutEndpoint || !this.logoutUri ||
+      this.logoutEndpoint.origin !== this.authorizationEndpoint?.origin ||
+      this.logoutUri.href !== new URL('/', location.href).href
+    ) {
+      return null;
+    }
+    const url = new URL(this.logoutEndpoint);
+    url.search = new URLSearchParams({ client_id: this.oauth.clientId, logout_uri: this.logoutUri.href }).toString();
+    return url;
   }
 
   private applySession(session: AccessSession): void {

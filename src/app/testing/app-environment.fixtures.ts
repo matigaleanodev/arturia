@@ -21,6 +21,11 @@ class FixtureAuthSession implements AuthSession {
   clear(): void {
     this.token.set(null);
   }
+
+  signOut(): URL | null {
+    this.clear();
+    return null;
+  }
 }
 
 const isLocalFixture =

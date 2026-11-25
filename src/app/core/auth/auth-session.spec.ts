@@ -105,3 +105,37 @@ it('ignores a stored session when sign-in is not configured', () => {
   expect(auth.signInAvailable).toBe(false);
   expect(auth.accessToken()).toBeNull();
 });
+
+it('signs out locally and returns the hosted logout URL of the published configuration', () => {
+  sessionStorage.setItem('arturia.oauth.session', JSON.stringify({ token: 'active', expiresAt: Date.now() + 60_000 }));
+  sessionStorage.setItem('arturia.oauth.transaction', '{}');
+  const auth = makeAuth();
+  expect(auth.accessToken()).toBe('active');
+
+  const logout = auth.signOut();
+
+  expect(auth.accessToken()).toBeNull();
+  expect(sessionStorage.getItem('arturia.oauth.session')).toBeNull();
+  expect(sessionStorage.getItem('arturia.oauth.transaction')).toBeNull();
+  expect(logout?.origin + logout!.pathname).toBe('https://identity.example/logout');
+  expect(Object.fromEntries(logout!.searchParams)).toEqual({
+    client_id: 'public-client',
+    logout_uri: 'https://arturia.example/',
+  });
+});
+
+it('signs out without a hosted logout when it does not match the sign-in configuration', () => {
+  for (const options of [
+    { logoutEndpoint: 'https://other-identity.example/logout' },
+    { logoutEndpoint: 'http://identity.example/logout' },
+    { logoutUri: 'https://other.example/' },
+    { redirectUri: 'https://other.example/' },
+  ]) {
+    sessionStorage.setItem('arturia.oauth.session', JSON.stringify({ token: 'active', expiresAt: Date.now() + 60_000 }));
+    const auth = makeAuth(options);
+    expect(auth.signOut(), JSON.stringify(options)).toBeNull();
+    expect(auth.accessToken()).toBeNull();
+    expect(sessionStorage.getItem('arturia.oauth.session')).toBeNull();
+    TestBed.resetTestingModule();
+  }
+});

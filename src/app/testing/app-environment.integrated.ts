@@ -23,6 +23,7 @@ const session: AuthSession = {
   async begin() { throw new Error('Local test session'); },
   async complete() { throw new Error('Local test session'); },
   clear() { token.set(null); },
+  signOut() { token.set(null); return null; },
 };
 
 const providers: Provider[] = [
