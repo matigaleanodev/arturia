@@ -48,9 +48,12 @@ test('deployed_browser_displays_blocks_before_terminal', async ({ browser }) => 
       requestedAt.set(request, Date.now());
       const origin = new URL(request.url()).origin;
       if (origin !== target.webOrigin && origin !== target.apiOrigin) outside.push(`${request.method()} ${origin}`);
-      pending.push(request.headerValue('authorization').then((value) => {
-        if (value !== null && origin !== target.apiOrigin) misdirected.push(`${request.method()} ${origin}`);
-      }));
+      // Read synchronously. request.headerValue() waits for network-stack extra info that never arrives for some
+      // requests against the real pilot, which left the awaited promises pending until the test timeout (13.10).
+      // An Authorization header set by fetch() is part of request.headers().
+      if (request.headers()['authorization'] !== undefined && origin !== target.apiOrigin) {
+        misdirected.push(`${request.method()} ${origin}`);
+      }
     });
     const page = await context.newPage();
     const streams: string[] = [];
