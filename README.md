@@ -8,69 +8,47 @@
 
 [Español](README.es.md)
 
-Angular web client for Arturia, a personal assistant backed by [Arturia API](https://github.com/matigaleanodev/arturia-api). The application uses standalone components, signal inputs, and the Angular router.
+Arturia is an open-source, self-hosted personal assistant you can use as a base for your own. This repository contains the Angular web client. Its interface is in Spanish.
 
-Replies render a Markdown subset (headings, lists, emphasis, links, tables, inline code and code blocks) from a parsed tree, with interpolation only: raw HTML stays literal text, images are not loaded, and links keep only absolute `http`, `https` and `mailto` URLs. The same rules apply while a reply is streaming.
+## Features
 
-## Development
+- Sign-in and sign-out through Amazon Cognito.
+- Personal and Work chat scopes with separate conversation histories. The browser remembers the last scope.
+- Streamed replies over Server-Sent Events, with resumption, snapshot fallback and cancellation.
+- Safe rendering of a Markdown subset in replies.
+- Light, dark and system themes.
+- Runtime configuration through `/config.json` so a single build serves every deployment.
+- Fixture mode with a synthetic conversation that needs no backend.
 
-Use the Node version in `.nvmrc` and npm 11.19.1.
+## Tech stack
+
+Angular 22 (standalone components, signals, router), TypeScript 6 in strict mode, Tailwind CSS 4, Vitest, Playwright with axe-core, and TypeScript types generated from the OpenAPI and SSE schemas.
+
+## Getting started
+
+Use the Node.js version in [`.nvmrc`](.nvmrc) and npm 11.19.1. Start a local session with synthetic data.
 
 ```sh
 nvm use
 npm ci
-npm start
+npm run start:fixtures
 ```
 
-Run `npm run start:fixtures` to serve the app with a synthetic conversation example. Angular selects the fixture module through a build-time file replacement. The synthetic session and conversation history run on loopback without a remote API.
+Open `http://localhost:4200`. The fixture session runs without an API or a Cognito account.
 
-## Application configuration
+To connect to your own API, serve the app over HTTPS and publish `/config.json` as described in [Configuration](docs/configuration.md). Run the checks in [Testing](docs/testing.md) before opening a pull request.
 
-The production build carries no environment values. Before bootstrapping, the app requests `/config.json` from its own origin with `cache: 'no-store'`, without credentials or redirects, and validates it. The same build can be published with a different file per deployment.
+## Documentation
 
-```json
-{
-  "version": 1,
-  "apiBaseUrl": "https://<rest-api-id>.execute-api.<region>.amazonaws.com/<stage>/",
-  "cognito": {
-    "domain": "https://<prefix>.auth.<region>.amazoncognito.com",
-    "clientId": "<public app client ID>",
-    "scopes": ["openid", "arturia/access"]
-  },
-  "redirectUri": "https://<web origin>/",
-  "logoutUri": "https://<web origin>/"
-}
-```
+- [Architecture](docs/architecture.md)
+- [Configuration](docs/configuration.md)
+- [API contract](docs/api-contract.md)
+- [Testing](docs/testing.md)
 
-- Only these fields are accepted; unknown fields such as a client secret make the file invalid. Every value is public.
-- `apiBaseUrl` is an HTTPS base URL, stage path included, without credentials, query or fragment. Requests resolve contract paths under it.
-- `cognito.domain` is an HTTPS origin without a path; the app derives `/oauth2/authorize`, `/oauth2/token` and `/logout` from it. `clientId` is a public client without a secret, and `scopes` must include `arturia/access`.
-- `redirectUri` and `logoutUri` must equal the root URL of the page origin, which must be HTTPS. The same values are registered as the Cognito callback and sign-out URLs.
-- A missing (403, 404 or HTML fallback), invalid (including a type other than `application/json`) or unreachable file, or one that takes longer than 5 s, leaves sign-in disabled with a visible error and no API or identity requests.
+## Companion repository
 
-Hosting serves `/config.json` with `Cache-Control: no-store`, outside the SPA fallback, and as same-origin content (`connect-src 'self'`). `index.html` is not cached; hashed bundles can be cached immutably. The fixture and integrated configurations inject their providers through a build-time file replacement and never request the file. The build fails if it contains a `config.json` or origins other than the framework's own. The hosting CSP allows only same-origin scripts, so critical CSS inlining is off and the build also fails if `index.html` has an inline script or event handler, or if a script, stylesheet or media file lacks a content hash.
+- [Arturia API](https://github.com/matigaleanodev/arturia-api)
 
-## API contract
+## Author and license
 
-The [local snapshot](src/app/core/api/contract/) comes from the [Arturia API contracts directory](https://github.com/matigaleanodev/arturia-api/tree/dev/contracts). It includes OpenAPI, the SSE payload schema, the synthetic chat fixture, and the source digest in `sha256.txt`.
-
-To synchronize, copy the three source files byte for byte, record the digest from the API root, and run `npm run contract:generate` in the web checkout. Commit the snapshot, digest, and generated TypeScript together.
-
-```sh
-sha256sum contracts/openapi.json contracts/sse.schema.json contracts/fixtures/chat.json | sha256sum
-```
-
-## Verification
-
-```sh
-npm exec -- playwright install chromium
-npm run verify
-```
-
-`verify` checks the snapshot digest and generated types, runs Vitest, builds for production, and runs Playwright with the fixture configuration. Run `npm test` or `npm run test:e2e` to select a suite.
-
-`npm run test:e2e:aws` checks a deployed environment in Chromium and never runs in `verify`. It requires `ARTURIA_E2E_WEB_URL` (distribution root), `ARTURIA_E2E_API_URL` (API base URL with its stage) and `ARTURIA_E2E_ACCESS_TOKEN`, plus an optional `ARTURIA_E2E_SCOPE` (`personal` or `work`). Every value is validated before a browser starts, the token is only stored in the page's `sessionStorage`, only the two declared hosts resolve, and no traces, videos, screenshots or test output are kept. Each run creates one conversation in the chosen scope.
-
-## License
-
-Arturia is maintained by [Matías Galeano](https://github.com/matigaleanodev) and distributed under [MPL-2.0](LICENSE). See [NOTICE](NOTICE) for the source notice and attribution.
+Maintained by [Matías Galeano](https://github.com/matigaleanodev). Licensed under the [Mozilla Public License 2.0 (MPL-2.0)](LICENSE). See [NOTICE](NOTICE) for copyright and attribution.
