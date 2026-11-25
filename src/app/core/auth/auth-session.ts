@@ -21,6 +21,8 @@ export type SessionEnd = 'expired' | 'denied';
 const transactionKey = 'arturia.oauth.transaction';
 const sessionKey = 'arturia.oauth.session';
 const transactionLifetimeMs = 10 * 60 * 1000;
+// A rejection this close to the local expiry is an expired token whose clock drifted, not a denial.
+const expirySkewMs = 30_000;
 
 interface LoginTransaction {
   readonly state: string;
@@ -88,6 +90,7 @@ export class BrowserAuthSession implements AuthSession {
   private readonly token = signal<string | null>(null);
   private readonly ended = signal<SessionEnd | null>(null);
   private expiryTimer?: ReturnType<typeof setTimeout>;
+  private expiresAt = 0;
 
   readonly accessToken = this.token.asReadonly();
   readonly endedReason = this.ended.asReadonly();
@@ -199,10 +202,12 @@ export class BrowserAuthSession implements AuthSession {
   }
 
   clear(reason: SessionEnd = 'expired'): void {
+    const nearExpiry = this.token() !== null && this.expiresAt - Date.now() <= expirySkewMs;
     clearTimeout(this.expiryTimer);
     this.token.set(null);
+    const ended = reason === 'denied' && nearExpiry ? 'expired' : reason;
     // A denial stays visible even if another request reports the same ended session as expired.
-    this.ended.update((current) => current === 'denied' ? current : reason);
+    this.ended.update((current) => current === 'denied' ? current : ended);
     sessionStorage.removeItem(sessionKey);
   }
 
@@ -225,6 +230,7 @@ export class BrowserAuthSession implements AuthSession {
 
   private applySession(session: AccessSession): void {
     this.ended.set(null);
+    this.expiresAt = session.expiresAt;
     this.token.set(session.token);
     clearTimeout(this.expiryTimer);
     const expire = () => {

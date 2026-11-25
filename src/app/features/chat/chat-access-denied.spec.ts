@@ -28,11 +28,11 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-function open(respond: () => Response) {
+function open(respond: () => Response, validForMs = 300_000) {
   vi.stubGlobal('location', Object.assign(new URL('https://arturia.example/'), { assign: vi.fn() }));
   sessionStorage.setItem(
     'arturia.oauth.session',
-    JSON.stringify({ token: 'synthetic-access-token', expiresAt: Date.now() + 300_000 }),
+    JSON.stringify({ token: 'synthetic-access-token', expiresAt: Date.now() + validForMs }),
   );
   const requests: { method: string; path: string }[] = [];
   vi.stubGlobal('fetch', vi.fn(async (url: URL, request: RequestInit) => {
@@ -81,8 +81,8 @@ it('leaves the chat for an explained denial and does not retry or redirect on it
   expect(shown).not.toContain('UNAUTHENTICATED');
 });
 
-it('reports an expired session when the gateway rejects the token', async () => {
-  open(() => Response.json({ message: 'Unauthorized' }, { status: 401 }));
+it('reports an expired session when the rejection arrives as the token is about to expire', async () => {
+  open(unprovisioned, 5_000);
 
   const harness = await RouterTestingHarness.create('/chat?scope=personal');
   await vi.waitFor(() => expect(TestBed.inject(Router).url).toBe('/'));

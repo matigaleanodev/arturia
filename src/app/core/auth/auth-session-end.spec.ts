@@ -60,6 +60,18 @@ it('reports an expired session when the stored token runs out', () => {
   expect(auth.endedReason()).toBe('expired');
 });
 
+it('reports expiry when a denial arrives within the clock-skew margin of the local expiry', () => {
+  const auth = makeAuth(20_000);
+  auth.clear('denied');
+  expect(auth.endedReason()).toBe('expired');
+});
+
+it('keeps a denial for a token with plenty of local validity left', () => {
+  const auth = makeAuth(120_000);
+  auth.clear('denied');
+  expect(auth.endedReason()).toBe('denied');
+});
+
 it('keeps a denied reason when a later clear arrives for the same ended session', () => {
   const auth = makeAuth();
   auth.clear('denied');

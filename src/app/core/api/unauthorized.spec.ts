@@ -7,9 +7,10 @@ import { AuthSession } from '../auth/auth-session';
 import { ChatApiError, HttpChatApi } from './chat-api';
 import { ChatStream } from './sse-client';
 
-// A 401 can come from two places. API Gateway rejects an expired or invalid token before any Lambda runs
-// and answers without the public error body. The Lambda answers UNAUTHENTICATED with the public body when
-// the token is valid but resolves to no active account (not provisioned, revoked or issued before activation).
+// The deployed API answers every rejection with the same public error: API Gateway (no token, invalid or
+// expired token) and the Lambda (valid token, no active account) both return 401 UNAUTHENTICATED. The
+// header that tells them apart is not exposed to the browser. A 401 for a token the client still holds
+// therefore means "this session is not accepted"; only the client's own expiry can say "expired".
 
 const apiBaseUrl = 'https://api.arturia.example/prod/';
 
@@ -25,21 +26,20 @@ function setup() {
   return { token, clear };
 }
 
-const lambdaRejection = () =>
+const publicRejection = () =>
   Response.json(
     { code: 'UNAUTHENTICATED', message: 'Se requiere una sesión válida.', requestId: 'synthetic-request' },
     { status: 401 },
   );
-const gatewayRejection = () => Response.json({ message: 'Unauthorized' }, { status: 401 });
 
 afterEach(() => {
   TestBed.resetTestingModule();
   vi.unstubAllGlobals();
 });
 
-it('marks the account as denied when the API rejects a valid token with UNAUTHENTICATED', async () => {
+it('reports a denied session when the API rejects a token the client still holds', async () => {
   const { clear } = setup();
-  vi.stubGlobal('fetch', vi.fn(async () => lambdaRejection()));
+  vi.stubGlobal('fetch', vi.fn(async () => publicRejection()));
 
   const failure = await TestBed.inject(HttpChatApi)
     .listConversations('scope-personal', new AbortController().signal)
@@ -50,22 +50,11 @@ it('marks the account as denied when the API rejects a valid token with UNAUTHEN
   expect(clear).toHaveBeenCalledExactlyOnceWith('denied');
 });
 
-it('marks the session as expired when the gateway rejects the token without the public error body', async () => {
-  const { clear } = setup();
-  vi.stubGlobal('fetch', vi.fn(async () => gatewayRejection()));
-
-  await TestBed.inject(HttpChatApi)
-    .listConversations('scope-personal', new AbortController().signal)
-    .catch(() => undefined);
-
-  expect(clear).toHaveBeenCalledExactlyOnceWith('expired');
-});
-
 it.each([
   ['an empty body', () => new Response(null, { status: 401 })],
   ['a body that is not JSON', () => new Response('<html>denied</html>', { status: 401 })],
-  ['a different public code', () => Response.json({ code: 'RATE_LIMITED', message: 'x', requestId: 'y' }, { status: 401 })],
-])('treats a 401 with %s as an expired session', async (_name, respond) => {
+  ['the default gateway body', () => Response.json({ message: 'Unauthorized' }, { status: 401 })],
+])('treats a 401 with %s the same way', async (_name, respond) => {
   const { clear } = setup();
   vi.stubGlobal('fetch', vi.fn(async () => respond()));
 
@@ -73,14 +62,14 @@ it.each([
     .listConversations('scope-personal', new AbortController().signal)
     .catch(() => undefined);
 
-  expect(clear).toHaveBeenCalledExactlyOnceWith('expired');
+  expect(clear).toHaveBeenCalledExactlyOnceWith('denied');
 });
 
 it('does not end a newer session when a 401 answers a request made with an older token', async () => {
   const { token, clear } = setup();
   vi.stubGlobal('fetch', vi.fn(async () => {
     token.set('refreshed-access-token');
-    return lambdaRejection();
+    return publicRejection();
   }));
 
   await TestBed.inject(HttpChatApi)
@@ -91,25 +80,33 @@ it('does not end a newer session when a 401 answers a request made with an older
   expect(token()).toBe('refreshed-access-token');
 });
 
-it('applies the same distinction to the event stream', async () => {
-  for (const [respond, reason] of [
-    [lambdaRejection, 'denied'],
-    [gatewayRejection, 'expired'],
-  ] as const) {
-    const { clear } = setup();
-    vi.stubGlobal('fetch', vi.fn(async () => respond()));
+it('applies the same rule to the event stream', async () => {
+  const { clear } = setup();
+  vi.stubGlobal('fetch', vi.fn(async () => publicRejection()));
 
-    const events = TestBed.inject(ChatStream).connect('scope-personal', 'turn-1', 0, new AbortController().signal);
-    await expect(events.next()).rejects.toMatchObject({ status: 401 });
+  const events = TestBed.inject(ChatStream).connect('scope-personal', 'turn-1', 0, new AbortController().signal);
+  await expect(events.next()).rejects.toMatchObject({ status: 401 });
 
-    expect(clear).toHaveBeenCalledExactlyOnceWith(reason);
-    TestBed.resetTestingModule();
-  }
+  expect(clear).toHaveBeenCalledExactlyOnceWith('denied');
 });
 
-it('never reads the rejection body into the thrown error', async () => {
+it('does not end the session when the event stream request was already aborted', async () => {
+  const { clear } = setup();
+  const controller = new AbortController();
+  vi.stubGlobal('fetch', vi.fn(async () => {
+    controller.abort();
+    return publicRejection();
+  }));
+
+  const events = TestBed.inject(ChatStream).connect('scope-personal', 'turn-1', 0, controller.signal);
+  await expect(events.next()).rejects.toBeDefined();
+
+  expect(clear).not.toHaveBeenCalled();
+});
+
+it('never carries the rejection body into the thrown error', async () => {
   setup();
-  vi.stubGlobal('fetch', vi.fn(async () => lambdaRejection()));
+  vi.stubGlobal('fetch', vi.fn(async () => publicRejection()));
 
   const failure = await TestBed.inject(HttpChatApi)
     .listConversations('scope-personal', new AbortController().signal)

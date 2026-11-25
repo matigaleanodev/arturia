@@ -35,7 +35,7 @@ const configErrors: Record<RuntimeConfigError, string> = {
             <p role="status">Abriendo tus conversaciones…</p>
           } @else if (auth.endedReason() === 'denied' && !switchUnavailable()) {
             <p class="notice" role="alert">Esta cuenta no tiene acceso a Arturia.</p>
-            <p class="note">Cerrá la sesión para ingresar con otra cuenta.</p>
+            <p class="note">Si es un error o tu sesión fue revocada, cerrá la sesión y volvé a ingresar, o usá otra cuenta.</p>
             <button class="button button-primary" type="button" (click)="switchAccount()">
               Cerrar sesión e ingresar con otra cuenta
             </button>

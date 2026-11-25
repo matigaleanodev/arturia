@@ -12,7 +12,6 @@ import type {
   TurnSnapshot,
 } from './contract/openapi.generated';
 import { parseRetryAfter } from './retry-after';
-import { endSessionAfterUnauthorized } from './unauthorized';
 
 export interface ConversationRef {
   readonly scopeId: string;
@@ -143,7 +142,8 @@ export class HttpChatApi implements ChatApi {
       cache: 'no-store',
       referrerPolicy: 'no-referrer',
     });
-    if (response.status === 401) await endSessionAfterUnauthorized(response, this.auth, token);
+    // Every rejection carries the same public error, so a 401 for a token still held means the session is not accepted.
+    if (response.status === 401 && this.auth.accessToken() === token) this.auth.clear('denied');
     if (response.status === 429) {
       throw new ChatApiError(429, parseRetryAfter(response.headers.get('retry-after'), Date.now()));
     }

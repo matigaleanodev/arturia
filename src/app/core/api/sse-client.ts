@@ -4,7 +4,6 @@ import { AuthSession } from '../auth/auth-session';
 import { apiUrl, CHAT_API_BASE_URL, ChatApiError, turnPath } from './chat-api';
 import type { ArturiaV1SSEPayload } from './contract/sse.generated';
 import { parseRetryAfter } from './retry-after';
-import { endSessionAfterUnauthorized } from './unauthorized';
 
 function decodeEvent(name: string, data: string[], turnId: string): ArturiaV1SSEPayload {
   const event = JSON.parse(data.join('\n')) as Record<string, unknown> | null;
@@ -114,11 +113,9 @@ export class ChatStream {
     });
     const mediaType = response.headers.get('content-type')?.split(';', 1)[0]?.trim().toLowerCase();
     if (attempt.aborted || !response.ok || mediaType !== 'text/event-stream' || !response.body) {
-      if (response.status === 401 && !attempt.aborted) {
-        await endSessionAfterUnauthorized(response, this.auth, token);
-      }
       void response.body?.cancel().catch(() => {});
       attempt.throwIfAborted();
+      if (response.status === 401 && this.auth.accessToken() === token) this.auth.clear('denied');
       if (response.status === 429) {
         throw new ChatApiError(429, parseRetryAfter(response.headers.get('retry-after'), Date.now()));
       }
