@@ -9,6 +9,8 @@
 
 Cliente web Angular de Arturia, un asistente personal que usa [Arturia API](https://github.com/matigaleanodev/arturia-api). La aplicación usa componentes standalone, entradas con señales y el router de Angular.
 
+Las respuestas muestran un subconjunto de Markdown (encabezados, listas, énfasis, enlaces, tablas, código inline y bloques de código) a partir de un árbol analizado y solo con interpolación: el HTML crudo queda como texto literal, las imágenes no se cargan y los enlaces conservan únicamente URLs absolutas `http`, `https` y `mailto`. Las mismas reglas valen durante el streaming.
+
 ## Desarrollo
 
 Usar la versión de Node indicada en `.nvmrc` y npm 11.19.1.

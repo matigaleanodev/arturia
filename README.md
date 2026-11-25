@@ -9,6 +9,8 @@
 
 Angular web client for Arturia, a personal assistant backed by [Arturia API](https://github.com/matigaleanodev/arturia-api). The application uses standalone components, signal inputs, and the Angular router.
 
+Replies render a Markdown subset (headings, lists, emphasis, links, tables, inline code and code blocks) from a parsed tree, with interpolation only: raw HTML stays literal text, images are not loaded, and links keep only absolute `http`, `https` and `mailto` URLs. The same rules apply while a reply is streaming.
+
 ## Development
 
 Use the Node version in `.nvmrc` and npm 11.19.1.
