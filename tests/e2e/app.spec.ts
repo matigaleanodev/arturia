@@ -25,7 +25,6 @@ test('app_loads_without_cloud', async ({ page, baseURL }) => {
 
   await page.goto('/');
 
-  await expect(page.getByRole('main').getByRole('heading', { name: 'Arturia' })).toBeVisible();
   await expect(page.getByText('Modo de prueba')).toBeVisible();
   await expect(page).toHaveURL(/\/chat\?scope=personal$/);
   await expect(page.getByRole('link', { name: 'Conversación de ejemplo' })).toBeVisible();

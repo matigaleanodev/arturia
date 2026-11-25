@@ -56,8 +56,9 @@ test('Shift+Enter adds a line and the field grows up to eight lines', async ({ p
   expect(Math.round(tall)).toBe(Math.round(metrics.line * 8 + metrics.padding));
 });
 
-test('replies render safe Markdown and can be copied', async ({ page, context }) => {
-  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+test('replies render safe Markdown and can be copied', async ({ page, context, browserName }) => {
+  // Only Chromium grants clipboard permissions to the test; the other engines still confirm the copy in the interface.
+  if (browserName === 'chromium') await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   const dialogs: string[] = [];
   page.on('dialog', (dialog) => {
     dialogs.push(dialog.message());
@@ -83,7 +84,9 @@ test('replies render safe Markdown and can be copied', async ({ page, context })
 
   await page.getByRole('button', { name: 'Copiar respuesta' }).click();
   await expect(page.getByRole('button', { name: 'Respuesta copiada' })).toBeVisible();
-  expect(await page.evaluate(() => navigator.clipboard.readText())).toContain('## Plan para la mudanza');
+  if (browserName === 'chromium') {
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toContain('## Plan para la mudanza');
+  }
   expect(dialogs).toEqual([]);
 });
 

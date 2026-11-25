@@ -51,11 +51,16 @@ async function watchCsp(page: Page) {
   page.on('pageerror', (error) => errors.push(error.message));
 
   const isCanary = (violation: Violation) => violation.directive === 'img-src' && violation.blocked.startsWith(canaryOrigin);
+  // Firefox requests /favicon.ico by itself; that browser-internal request is not application traffic.
+  const isBrowserFavicon = (violation: Violation) => violation.directive === 'img-src' && violation.blocked.endsWith('/favicon.ico');
+  const unexpectedViolations = () => violations.filter((violation) => !isCanary(violation) && !isBrowserFavicon(violation));
+  // Only Chromium logs CSP violations to the console; elsewhere the DOM event is the single channel.
+  const consoleChannel = page.context().browser()?.browserType().name() === 'chromium';
 
   /** Fails with what both channels recorded so far, without touching the page. */
   function expectNoRecordedViolations(): void {
-    expect(violations.filter((violation) => !isCanary(violation)), 'CSP violations').toEqual([]);
-    expect(reports.length, `CSP console reports: ${JSON.stringify(reports)}`).toBeLessThanOrEqual(canaries);
+    expect(unexpectedViolations(), 'CSP violations').toEqual([]);
+    if (consoleChannel) expect(reports.length, `CSP console reports: ${JSON.stringify(reports)}`).toBeLessThanOrEqual(canaries);
   }
 
   /**
@@ -72,9 +77,9 @@ async function watchCsp(page: Page) {
       document.body.append(image);
     }, `${canaryOrigin}/${canaries}.png`);
     await expect.poll(() => violations.filter(isCanary).length, { message: 'the CSP must block and report the canary' }).toBe(canaries);
-    await expect.poll(() => reports.length, { message: 'canary console report' }).toBeGreaterThanOrEqual(canaries);
-    expect(violations.filter((violation) => !isCanary(violation)), 'CSP violations').toEqual([]);
-    expect(reports, 'CSP console reports').toHaveLength(canaries);
+    if (consoleChannel) await expect.poll(() => reports.length, { message: 'canary console report' }).toBeGreaterThanOrEqual(canaries);
+    expect(unexpectedViolations(), 'CSP violations').toEqual([]);
+    if (consoleChannel) expect(reports, 'CSP console reports').toHaveLength(canaries);
     expect(errors, 'page errors').toEqual([]);
   }
 

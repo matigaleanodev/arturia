@@ -17,6 +17,7 @@
     "test:contract": "node --test scripts/check-contract.test.mjs",
     "test": "ng test --watch=false",
     "test:e2e": "playwright test",
+    "test:e2e:cross": "ARTURIA_CROSS_BROWSER=1 playwright test",
     "test:e2e:aws": "playwright test --config playwright.aws.config.ts",
     "test:e2e:aws:unit": "node --test \"tests/e2e-aws/*.test.ts\"",
     "verify": "npm run test:contract && npm run contract:check && npm run test:e2e:aws:unit && npm test && npm run build && npm run test:e2e"

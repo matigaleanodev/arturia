@@ -72,6 +72,8 @@ test.describe('production build', () => {
       localStorage.setItem('arturia.theme', 'dark');
       addEventListener('securitypolicyviolation', (event) => {
         const report = Reflect.get(window, 'reportCspViolation') as (directive: string) => void;
+        // Firefox requests /favicon.ico by itself; that browser-internal request is not application traffic.
+        if (event.effectiveDirective === 'img-src' && event.blockedURI.endsWith('/favicon.ico')) return;
         report(event.effectiveDirective);
       });
     });
