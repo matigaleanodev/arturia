@@ -1,0 +1,141 @@
+@layer components {
+  .settings { min-block-size: 100dvh; }
+  .settings-top { display: flex; align-items: center; gap: 0.5rem; block-size: 3.5rem; padding: 0 1rem; }
+  .settings-top h1 { font-size: 1rem; font-weight: 650; }
+
+  .back {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-block-size: 2.5rem;
+    padding: 0 0.75rem 0 0.5rem;
+    border-radius: var(--shape-control);
+    color: var(--text-secondary);
+    font-weight: 550;
+    text-decoration: none;
+  }
+
+  .back:hover { background: var(--state-hover); color: var(--text-main); }
+  .back:active { background: var(--state-active); color: var(--text-main); }
+
+  .settings-body {
+    display: grid;
+    grid-template-columns: 12rem minmax(0, 1fr);
+    gap: 3rem;
+    max-inline-size: 60rem;
+    margin-inline: auto;
+    padding: 1.5rem var(--gutter) 4rem;
+  }
+
+  .settings-body > h1 { grid-column: 1 / -1; font-size: 1.5rem; font-weight: 650; letter-spacing: -0.015em; }
+  .settings-nav { position: sticky; inset-block-start: 1rem; display: grid; align-content: start; gap: 0.125rem; }
+
+  .settings-nav a {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    min-block-size: 2.5rem;
+    padding: 0 0.625rem;
+    border-radius: var(--shape-control);
+    color: var(--text-main);
+    text-decoration: none;
+  }
+
+  .settings-nav a:hover { background: var(--state-hover); }
+  .settings-nav a:active { background: var(--state-active); }
+  .settings-nav a[aria-current='true'] { background: var(--state-selected); font-weight: 600; }
+  .settings-nav .icon { color: var(--text-secondary); }
+
+  .settings-sections { display: grid; gap: 2.5rem; }
+  .settings-section { display: grid; gap: 1rem; scroll-margin-block-start: 1.5rem; }
+  .settings-section + .settings-section { padding-block-start: 2.5rem; border-block-start: 1px solid var(--border-muted); }
+  .settings-section h2 { font-size: 1.0625rem; font-weight: 650; }
+  .settings-section > header p { margin-block-start: 0.25rem; color: var(--text-secondary); }
+
+  .theme-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.75rem; }
+
+  .theme-option {
+    position: relative;
+    display: grid;
+    gap: 0.75rem;
+    padding: 0.625rem;
+    border: 1px solid var(--border-muted);
+    border-radius: var(--shape-panel);
+    background: var(--surface-panel);
+  }
+
+  .theme-option:hover { border-color: var(--border-control); }
+  .theme-option:active { background: var(--state-active); }
+  .theme-option:has(input:checked) { border-color: var(--action-text); background: var(--state-selected); box-shadow: 0 0 0 1px var(--action-text); }
+  .theme-option:has(input:focus-visible) { outline: 2px solid var(--state-focus); outline-offset: 2px; }
+  /* The transparent radio covers the whole card, so the card is its click target. */
+  .theme-option input { position: absolute; inset: 0; z-index: 1; inline-size: 100%; block-size: 100%; margin: 0; opacity: 0; cursor: pointer; }
+  .theme-option .meta { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; padding: 0 0.25rem 0.125rem; }
+  .theme-option strong { display: block; font-weight: 600; }
+  .theme-option small { color: var(--text-secondary); font-size: 0.8125rem; }
+
+  .radio {
+    display: grid;
+    place-items: center;
+    flex: none;
+    inline-size: 1.25rem;
+    block-size: 1.25rem;
+    border: 1.5px solid var(--border-control);
+    border-radius: 50%;
+  }
+
+  .theme-option:has(input:checked) .radio { border-color: var(--action-fill); background: var(--action-fill); }
+  .theme-option:has(input:checked) .radio::after { content: ''; inline-size: 0.5rem; block-size: 0.5rem; border-radius: 50%; background: #ffffff; }
+
+  /* Previews use each palette's literal colors so both stay visible whatever the active theme. */
+  .thumb { display: flex; block-size: 5.5rem; overflow: hidden; border: 1px solid var(--border-muted); border-radius: 0.625rem; }
+  .thumb .half { display: grid; flex: 1; grid-template-columns: 26% 1fr; background: var(--bg); }
+  .thumb .t-rail { display: grid; align-content: start; gap: 0.25rem; padding: 0.5rem 0.375rem; background: var(--rail); }
+  .thumb .t-main { display: grid; align-content: space-between; padding: 0.625rem 0.5rem; }
+  .thumb i { display: block; block-size: 0.25rem; border-radius: 1rem; background: var(--txt); opacity: 0.55; }
+  .thumb i.w70 { inline-size: 70%; }
+  .thumb i.w80 { inline-size: 80%; }
+  .thumb i.w85 { inline-size: 85%; }
+  .thumb .t-bubble { justify-self: end; inline-size: 55%; block-size: 0.75rem; border-radius: 0.375rem; background: var(--bub); }
+  .thumb .t-comp { position: relative; block-size: 0.875rem; border: 1px solid var(--line); border-radius: 1rem; background: var(--pnl); }
+
+  .thumb .t-comp::after {
+    content: '';
+    position: absolute;
+    inset-inline-end: 0.125rem;
+    inset-block-start: 0.0625rem;
+    inline-size: 0.625rem;
+    block-size: 0.625rem;
+    border-radius: 50%;
+    background: var(--dot);
+  }
+
+  .light-pal { --bg: #f6f7fb; --rail: #edf0f7; --line: #cdd6e4; --txt: #4d5b73; --bub: #e9eef9; --dot: #24458c; --pnl: #ffffff; }
+  .dark-pal { --bg: #101015; --rail: #16161d; --line: #393643; --txt: #817b8e; --bub: #292831; --dot: #9f2946; --pnl: #191920; }
+
+  .session-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem 1.125rem;
+    border: 1px solid var(--border-muted);
+    border-radius: var(--shape-panel);
+    background: var(--surface-panel);
+  }
+
+  .session-row p { color: var(--text-secondary); font-size: 0.875rem; }
+  .session-row strong { display: block; color: var(--text-main); font-size: 0.9375rem; font-weight: 600; }
+
+  @media (max-width: 767.98px) {
+    .settings-top { padding: 0 0.5rem; }
+    .back { min-inline-size: 2.75rem; min-block-size: 2.75rem; justify-content: center; padding: 0; }
+    .back-label { display: none; }
+    .settings-body { grid-template-columns: minmax(0, 1fr); gap: 1.5rem; padding-block-start: 0.5rem; }
+    .theme-options { grid-template-columns: minmax(0, 1fr); gap: 0.5rem; }
+    .theme-option { grid-template-columns: 5.5rem minmax(0, 1fr); align-items: center; padding: 0.5rem; border-radius: 0.875rem; }
+    .thumb { block-size: 3.5rem; }
+    .settings-section + .settings-section { padding-block-start: 1.5rem; }
+  }
+}

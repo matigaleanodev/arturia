@@ -1,0 +1,92 @@
+@layer components {
+  .composer {
+    display: grid;
+    gap: 0.125rem;
+    padding: 0.375rem 0.625rem 0.5rem 1rem;
+    border: 1px solid color-mix(in srgb, var(--border-control) 55%, var(--border-muted));
+    border-radius: var(--shape-composer);
+    background: var(--surface-panel);
+    box-shadow: var(--depth-panel);
+    transition: border-color var(--motion-time), box-shadow var(--motion-time);
+  }
+
+  .composer:focus-within { border-color: var(--border-control); box-shadow: var(--depth-panel), 0 0 0 1px var(--border-control); }
+
+  /*
+   * The padding belongs to the field itself, so text scrolls under it instead of being cut at the edge, and the
+   * maximum height is a whole number of lines plus that padding.
+   */
+  .composer textarea {
+    --composer-padding: 0.5rem;
+    --composer-lines: 8;
+    display: block;
+    inline-size: 100%;
+    max-block-size: calc(var(--composer-line) * var(--composer-lines) + var(--composer-padding) * 2);
+    padding: var(--composer-padding) 0.5rem var(--composer-padding) 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    font-size: 1rem;
+    line-height: var(--composer-line);
+    overflow-y: auto;
+    resize: none;
+    scroll-padding-block: var(--composer-padding);
+    /* A line that scrolls past the edge fades inside the padding instead of showing a cut sliver. */
+    mask-image: linear-gradient(
+      transparent,
+      #000 var(--composer-padding),
+      #000 calc(100% - var(--composer-padding)),
+      transparent
+    );
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-muted) transparent;
+  }
+
+  .composer textarea::placeholder { color: var(--text-secondary); opacity: 1; }
+  .composer textarea[readonly] { color: var(--text-secondary); }
+
+  .composer-row { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; min-block-size: 2.75rem; }
+  .composer-hint { color: var(--text-secondary); font-size: 0.8125rem; opacity: 0; transition: opacity var(--motion-time); }
+  .composer:focus-within .composer-hint { opacity: 1; }
+
+  .send {
+    position: relative;
+    display: grid;
+    place-items: center;
+    flex: none;
+    inline-size: 2.5rem;
+    block-size: 2.5rem;
+    margin: 0.125rem;
+    margin-inline-start: auto;
+    border: 0;
+    border-radius: 50%;
+    background: var(--action-fill);
+    color: var(--action-on-fill);
+    transition: background-color var(--motion-time);
+  }
+
+  /* 44 px target around the 40 px button. */
+  .send::before { content: ''; position: absolute; inset: -0.125rem; border-radius: 50%; }
+  .send:enabled:hover { background: var(--action-hover); }
+  .send:enabled:active { background: var(--action-active); }
+  .send:disabled { background: var(--state-active); color: var(--text-disabled); cursor: default; }
+  .send .icon svg { stroke-width: 2; }
+  .stop-glyph { inline-size: 0.875rem; block-size: 0.875rem; border-radius: 0.1875rem; background: currentColor; }
+
+  @media (max-width: 767.98px) {
+    .composer {
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: end;
+      padding: 0.5rem 0.5rem 0.5rem 1rem;
+    }
+
+    .composer textarea { --composer-lines: 5; }
+    .composer-row { min-block-size: 0; }
+    .composer-hint { display: none; }
+  }
+
+  /* Touch screens add lines with Enter, so the shortcut hint does not apply. */
+  @media (pointer: coarse) {
+    .composer-hint { display: none; }
+  }
+}

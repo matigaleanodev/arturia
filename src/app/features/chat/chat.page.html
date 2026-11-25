@@ -1,0 +1,187 @@
+<div class="shell" [class.is-collapsed]="collapsed()" [class.drawer-open]="drawerActive()">
+  <aside
+    #sidebar
+    id="sidebar"
+    class="sidebar"
+    aria-label="Navegación"
+    [attr.role]="drawerActive() ? 'dialog' : null"
+    [attr.aria-modal]="drawerActive() ? 'true' : null"
+    (keydown.escape)="closeDrawer()"
+    (keydown)="trapFocus($event)"
+  >
+    @if (collapsed()) {
+      <div class="rail-group">
+        <button
+          class="icon-button"
+          type="button"
+          aria-controls="sidebar"
+          aria-expanded="false"
+          aria-label="Abrir barra lateral"
+          title="Abrir barra lateral"
+          data-sidebar-toggle
+          (click)="toggleSidebar()"
+        ><app-icon name="panel" /></button>
+        <a
+          class="icon-button"
+          routerLink="/chat"
+          [queryParams]="{ scope: scope()?.key }"
+          aria-label="Nueva conversación"
+          title="Nueva conversación"
+          (click)="startConversation()"
+        ><app-icon name="compose" /></a>
+      </div>
+      <div class="rail-group">
+        <button
+          class="rail-scope"
+          type="button"
+          [attr.aria-label]="'Ámbito: ' + scope()?.label + '. Abrir barra lateral para cambiarlo'"
+          [title]="'Ámbito: ' + scope()?.label"
+          (click)="toggleSidebar()"
+        >{{ scope()?.label?.[0] }}</button>
+      </div>
+      <div class="rail-spacer"></div>
+      <a
+        class="icon-button"
+        routerLink="/settings"
+        [queryParams]="{ scope: scope()?.key, conversation: conversationId() }"
+        aria-label="Configuración"
+        title="Configuración"
+      ><app-icon name="sliders" /></a>
+    } @else {
+      <div class="sidebar-head">
+        <div class="brand"><app-brand-mark /><span>Arturia</span></div>
+        @if (mobile()) {
+          <button class="icon-button" type="button" aria-label="Cerrar menú" data-drawer-close (click)="closeDrawer()">
+            <app-icon name="close" />
+          </button>
+        } @else {
+          <button
+            class="icon-button"
+            type="button"
+            aria-controls="sidebar"
+            aria-expanded="true"
+            aria-label="Cerrar barra lateral"
+            title="Cerrar barra lateral"
+            data-sidebar-toggle
+            (click)="toggleSidebar()"
+          ><app-icon name="panel" /></button>
+        }
+      </div>
+
+      <app-scope-picker [activeScope]="scope()?.key" />
+
+      <div class="sidebar-actions">
+        <a class="nav-item" routerLink="/chat" [queryParams]="{ scope: scope()?.key }" (click)="startConversation()">
+          <app-icon name="compose" />Nueva conversación
+        </a>
+      </div>
+
+      <nav class="history" aria-labelledby="history-heading">
+        <h2 id="history-heading">Conversaciones</h2>
+        @if (chat.historyLoading() && !chat.conversations().length) {
+          <p class="history-note" role="status">Cargando historial…</p>
+        } @else if (chat.conversations().length) {
+          <ul>
+            @for (item of chat.conversations(); track item.conversationId) {
+              <li>
+                <a
+                  routerLink="/chat"
+                  [queryParams]="{ scope: scope()?.key, conversation: item.conversationId }"
+                  [attr.aria-current]="item.conversationId === conversationId() ? 'page' : null"
+                  (click)="closeDrawer(false)"
+                >
+                  @if (item.title) {
+                    {{ item.title }}
+                  } @else {
+                    Nueva conversación <time [attr.datetime]="item.createdAt">{{ historyLabel(item.createdAt) }}</time>
+                  }
+                </a>
+              </li>
+            }
+          </ul>
+        } @else {
+          <p class="history-note">Todavía no hay conversaciones.</p>
+        }
+      </nav>
+
+      <div class="sidebar-foot">
+        <a
+          class="nav-item"
+          routerLink="/settings"
+          [queryParams]="{ scope: scope()?.key, conversation: conversationId() }"
+        ><app-icon name="sliders" />Configuración</a>
+      </div>
+    }
+  </aside>
+
+  <div class="backdrop" aria-hidden="true" (click)="closeDrawer()"></div>
+
+  <main class="main" [class.is-empty]="!conversationId() && !chat.conversation()" [attr.inert]="drawerActive() ? '' : null">
+    <header class="topbar">
+      <button
+        #menuButton
+        class="icon-button mobile-only"
+        type="button"
+        aria-label="Abrir menú"
+        aria-controls="sidebar"
+        [attr.aria-expanded]="drawerActive()"
+        (click)="openDrawer()"
+      ><app-icon name="menu" /></button>
+      @if (chat.conversation()) {
+        <h1>{{ title() }}</h1>
+        @if (collapsed()) {
+          <span class="scope-chip"><span class="sr-only">Ámbito: </span>{{ scope()?.label }}</span>
+        }
+      } @else {
+        <h1 class="scope-title">{{ scope()?.label }}</h1>
+      }
+      <a
+        class="icon-button mobile-only"
+        routerLink="/chat"
+        [queryParams]="{ scope: scope()?.key }"
+        aria-label="Nueva conversación"
+        (click)="startConversation()"
+      ><app-icon name="compose" /></a>
+    </header>
+
+    @if (chat.conversation(); as conversation) {
+      <div #thread class="thread" role="region" aria-label="Mensajes" tabindex="0" (scroll)="trackScroll()">
+        <div class="thread-inner">
+          @for (turn of conversation.turns; track turn.snapshot.turnId) {
+            <app-turn [turn]="turn" [preview]="chat.streamText().get(turn.snapshot.turnId)" (copiedText)="copied($event)" />
+          }
+        </div>
+      </div>
+    } @else {
+      <div class="thread">
+        <div class="empty">
+          @if (chat.conversationLoading()) {
+            <p role="status">Cargando conversación…</p>
+          } @else {
+            <app-brand-mark />
+            <h2>¿En qué te ayudo?</h2>
+          }
+        </div>
+      </div>
+    }
+
+    <div class="dock">
+      <div class="dock-inner">
+        @if (chat.error(); as message) {
+          <div class="send-error" role="alert">
+            <app-icon name="alert" />
+            <span>{{ message }}@if (chat.pending()) { El mensaje se conservó.}</span>
+            @if (chat.pending() && !chat.sending()) {
+              <button type="button" (click)="retrySend()">Reintentar envío</button>
+            }
+          </div>
+        }
+        @if (!conversationId() || chat.conversation()) {
+          <app-composer (created)="conversationCreated($event)" />
+        }
+      </div>
+    </div>
+  </main>
+
+  <p class="sr-only" role="status" aria-live="polite">{{ announcement() }}</p>
+</div>

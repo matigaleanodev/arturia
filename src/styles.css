@@ -1,0 +1,81 @@
+@import "tailwindcss";
+@import "./styles/base.css";
+@import "./styles/shell.css";
+@import "./styles/conversation.css";
+@import "./styles/markdown.css";
+@import "./styles/composer.css";
+@import "./styles/settings.css";
+@import "./styles/access.css";
+
+@theme inline {
+  --color-canvas: var(--surface-canvas);
+  --color-panel: var(--surface-panel);
+  --color-rail: var(--surface-rail);
+  --color-elevated: var(--surface-elevated);
+  --color-ink: var(--text-main);
+  --color-subtle: var(--text-secondary);
+  --color-disabled: var(--text-disabled);
+  --color-line: var(--border-muted);
+  --color-control: var(--border-control);
+  --color-action: var(--action-text);
+  --color-accent: var(--accent-detail);
+  --color-danger: var(--status-error);
+  --color-success: var(--status-success);
+  --color-warning: var(--status-warning);
+  --color-info: var(--status-info);
+  --font-sans: var(--type-body);
+  --radius-control: var(--shape-control);
+  --radius-panel: var(--shape-panel);
+  --shadow-panel: var(--depth-panel);
+}
+
+/* Saber (light) and Saber Alter (dark): approved palettes, unchanged. */
+:root {
+  color-scheme: light dark;
+  --surface-canvas: light-dark(#f6f7fb, #101015);
+  --surface-panel: light-dark(#ffffff, #191920);
+  --surface-rail: light-dark(#edf0f7, #16161d);
+  --surface-elevated: light-dark(#e9eef9, #292831);
+  --text-main: light-dark(#202b40, #e8e6ed);
+  --text-secondary: light-dark(#4d5b73, #b9b5c5);
+  --text-disabled: light-dark(#576477, #a8a4b5);
+  --border-muted: light-dark(#cdd6e4, #393643);
+  --border-control: light-dark(#728198, #817b8e);
+  --action-text: light-dark(#24458c, #f28ba0);
+  --action-fill: light-dark(#24458c, #9f2946);
+  --action-hover: light-dark(#1d3977, #ad3151);
+  --action-active: light-dark(#192f61, #86223c);
+  --action-on-fill: #ffffff;
+  --state-hover: light-dark(#e2e8f4, #282630);
+  --state-active: light-dark(#d8e2f4, #35303e);
+  --state-selected: light-dark(#dfe8f9, #332331);
+  --state-focus: light-dark(#24458c, #f28ba0);
+  --accent-detail: light-dark(#c5a45d, #d7b76a);
+  --status-success: light-dark(#216247, #8bd7b1);
+  --status-warning: light-dark(#795115, #f0c77e);
+  --status-error: light-dark(#9b2946, #ffb48d);
+  --status-error-surface: light-dark(#fff1f3, #35251f);
+  --status-info: light-dark(#285f85, #a1caef);
+  --depth-panel: 0 0.4rem 1.6rem light-dark(#233d7020, #00000036);
+  --shape-control: 0.625rem;
+  --shape-panel: 1.125rem;
+  --shape-composer: 1.5rem;
+  --motion-time: 130ms;
+  --motion-easing: ease-out;
+
+  /* One system sans for the whole interface, brand included. */
+  --type-body: "Segoe UI Variable Text", "Segoe UI", "Ubuntu Sans", system-ui, sans-serif;
+  --type-code: ui-monospace, "Cascadia Code", "Ubuntu Sans Mono", Consolas, monospace;
+  --measure: 48rem;
+  --gutter: clamp(1rem, 3vw, 2rem);
+  --sidebar-width: 17rem;
+  --rail-width: 3.75rem;
+  --composer-line: 1.5rem;
+}
+
+:root[data-theme='light'] { color-scheme: light; }
+:root[data-theme='dark'] { color-scheme: dark; }
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --motion-time: 0ms; }
+}
