@@ -1,5 +1,6 @@
 # Arturia
 
+[![Validate](https://github.com/matigaleanodev/arturia/actions/workflows/ci.yml/badge.svg?branch=dev)](https://github.com/matigaleanodev/arturia/actions/workflows/ci.yml)
 [![Angular 22](https://img.shields.io/badge/Angular-22-DD0031?logo=angular&logoColor=white)](https://angular.dev/overview)
 [![Node.js 24](https://img.shields.io/badge/Node.js-24-339933?logo=nodedotjs&logoColor=white)](https://nodejs.org/en/download)
 [![TypeScript 6.0](https://img.shields.io/badge/TypeScript-6.0-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/docs/)
