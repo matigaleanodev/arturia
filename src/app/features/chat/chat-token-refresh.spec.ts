@@ -32,7 +32,7 @@ it('keeps the first send alive when the access token changes while the message i
     providers: [
       provideRouter(routes),
       { provide: APP_OPTIONS, useValue: options },
-      { provide: AuthSession, useValue: { accessToken: token.asReadonly(), signOut: () => null } },
+      { provide: AuthSession, useValue: { accessToken: token.asReadonly(), endedReason: signal(null), signOut: () => null } },
     ],
   });
 
@@ -91,7 +91,7 @@ it('leaves the chat when the access token is cleared', async () => {
     providers: [
       provideRouter(routes),
       { provide: APP_OPTIONS, useValue: options },
-      { provide: AuthSession, useValue: { accessToken: token.asReadonly(), signOut: () => null } },
+      { provide: AuthSession, useValue: { accessToken: token.asReadonly(), endedReason: signal(null), signOut: () => null } },
     ],
   });
   vi.stubGlobal('fetch', vi.fn(async () => Response.json({ conversations: [] })));

@@ -33,7 +33,18 @@ const configErrors: Record<RuntimeConfigError, string> = {
             <p role="status">Iniciando sesión…</p>
           } @else if (auth.accessToken()) {
             <p role="status">Abriendo tus conversaciones…</p>
+          } @else if (auth.endedReason() === 'denied' && !switchUnavailable()) {
+            <p class="notice" role="alert">Esta cuenta no tiene acceso a Arturia.</p>
+            <p class="note">Cerrá la sesión para ingresar con otra cuenta.</p>
+            <button class="button button-primary" type="button" (click)="switchAccount()">
+              Cerrar sesión e ingresar con otra cuenta
+            </button>
           } @else if (auth.signInAvailable) {
+            @if (switchUnavailable()) {
+              <p class="notice" role="alert">Esta cuenta no tiene acceso a Arturia.</p>
+            } @else if (auth.endedReason() === 'expired') {
+              <p class="notice" role="status">Tu sesión venció. Iniciá sesión de nuevo.</p>
+            }
             <button class="button button-primary" type="button" (click)="signIn()">Iniciar sesión</button>
             <p class="note">Vas a ingresar con tu cuenta y un código de verificación.</p>
           } @else if (configError) {
@@ -53,6 +64,7 @@ export class HomePage {
   protected readonly auth = inject(AuthSession);
   protected readonly busy = signal(false);
   protected readonly error = signal('');
+  protected readonly switchUnavailable = signal(false);
   private readonly configErrorKey = inject(APP_OPTIONS).configError;
   protected readonly configError = this.configErrorKey ? configErrors[this.configErrorKey] : '';
 
@@ -87,6 +99,13 @@ export class HomePage {
       this.error.set('No se pudo iniciar sesión. Volvé a intentar.');
       this.busy.set(false);
     }
+  }
+
+  /** Ends the hosted identity session too, so the next sign-in can use another account. */
+  protected switchAccount(): void {
+    const logout = this.auth.signOut();
+    if (logout) location.assign(logout.href);
+    else this.switchUnavailable.set(true);
   }
 
   private async completeSignIn(callback: URLSearchParams): Promise<void> {

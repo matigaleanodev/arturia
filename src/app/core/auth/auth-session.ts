@@ -5,13 +5,18 @@ import { APP_OPTIONS, httpsUrl } from '../app-options';
 @Injectable({ providedIn: 'root', useFactory: () => inject(BrowserAuthSession) })
 export abstract class AuthSession {
   abstract readonly accessToken: Signal<string | null>;
+  /** Why the last session ended, until the user signs in or out again. */
+  abstract readonly endedReason: Signal<SessionEnd | null>;
   abstract readonly signInAvailable: boolean;
   abstract begin(): Promise<URL>;
   abstract complete(callback: URLSearchParams): Promise<void>;
-  abstract clear(): void;
+  /** Drops the local session. `denied` means a valid token resolved to an account without access. */
+  abstract clear(reason?: SessionEnd): void;
   /** Ends the local session and returns the hosted logout page to visit, when one is configured. */
   abstract signOut(): URL | null;
 }
+
+export type SessionEnd = 'expired' | 'denied';
 
 const transactionKey = 'arturia.oauth.transaction';
 const sessionKey = 'arturia.oauth.session';
@@ -81,9 +86,11 @@ export class BrowserAuthSession implements AuthSession {
   private readonly logoutEndpoint = httpsUrl(this.oauth?.logoutEndpoint);
   private readonly logoutUri = httpsUrl(this.oauth?.logoutUri);
   private readonly token = signal<string | null>(null);
+  private readonly ended = signal<SessionEnd | null>(null);
   private expiryTimer?: ReturnType<typeof setTimeout>;
 
   readonly accessToken = this.token.asReadonly();
+  readonly endedReason = this.ended.asReadonly();
   readonly signInAvailable = Boolean(
     this.redirectUri?.href === new URL('/', location.href).href &&
       this.oauth?.clientId &&
@@ -107,6 +114,7 @@ export class BrowserAuthSession implements AuthSession {
       throw new Error('Sign-in is unavailable');
     }
 
+    this.ended.set(null);
     const verifier = base64Url(crypto.getRandomValues(new Uint8Array(32)));
     const state = base64Url(crypto.getRandomValues(new Uint8Array(32)));
     const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier));
@@ -190,14 +198,17 @@ export class BrowserAuthSession implements AuthSession {
     this.applySession(session);
   }
 
-  clear(): void {
+  clear(reason: SessionEnd = 'expired'): void {
     clearTimeout(this.expiryTimer);
     this.token.set(null);
+    // A denial stays visible even if another request reports the same ended session as expired.
+    this.ended.update((current) => current === 'denied' ? current : reason);
     sessionStorage.removeItem(sessionKey);
   }
 
   signOut(): URL | null {
     this.clear();
+    this.ended.set(null);
     sessionStorage.removeItem(transactionKey);
     // Same rules as sign-in: the hosted pages share one origin and the browser returns to this root.
     if (
@@ -213,6 +224,7 @@ export class BrowserAuthSession implements AuthSession {
   }
 
   private applySession(session: AccessSession): void {
+    this.ended.set(null);
     this.token.set(session.token);
     clearTimeout(this.expiryTimer);
     const expire = () => {

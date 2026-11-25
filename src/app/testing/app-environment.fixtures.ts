@@ -8,6 +8,7 @@ import { FixtureChatApi, fixtureScopes } from './fixture-chat-api';
 class FixtureAuthSession implements AuthSession {
   private readonly token = signal<string | null>('arturia-test-session');
   readonly accessToken = this.token.asReadonly();
+  readonly endedReason = signal(null).asReadonly();
   readonly signInAvailable = false;
 
   async begin(): Promise<URL> {

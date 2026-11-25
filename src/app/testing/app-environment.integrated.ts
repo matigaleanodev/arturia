@@ -19,6 +19,7 @@ if (location.protocol !== 'http:' || location.hostname !== '127.0.0.1' ||
 const token = signal<string | null>('integrated.a.local');
 const session: AuthSession = {
   accessToken: token.asReadonly(),
+  endedReason: signal(null).asReadonly(),
   signInAvailable: false,
   async begin() { throw new Error('Local test session'); },
   async complete() { throw new Error('Local test session'); },
