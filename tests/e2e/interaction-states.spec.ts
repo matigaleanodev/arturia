@@ -225,12 +225,15 @@ test('keyboard only: shell, composer, drawer, settings and sign out', async ({ p
   const indicator = () => page.evaluate(() => {
     const element = document.activeElement as HTMLElement | null;
     if (!element || element === document.body) return null;
+    const repeated = element.hasAttribute('data-tab-seen');
+    element.setAttribute('data-tab-seen', '');
     const own = getComputedStyle(element);
-    const holder = element.closest('label') ?? element;
+    // The indicator of a radio sits on its card and the composer's on its surface.
+    const holder = element.closest('label, .composer') ?? element;
     const host = getComputedStyle(holder);
     const ring = (style: CSSStyleDeclaration) => style.outlineStyle !== 'none' && parseFloat(style.outlineWidth) > 0 ||
       style.boxShadow !== 'none';
-    return { name: element.getAttribute('aria-label') || element.textContent?.trim().slice(0, 40) || element.tagName, visible: ring(own) || ring(host) || !!element.closest('.composer') };
+    return { name: element.getAttribute('aria-label') || element.textContent?.trim().slice(0, 40) || element.tagName, repeated, visible: ring(own) || ring(host) };
   });
 
   // Tab through the whole first screen: every stop is named and shows an indicator, and focus never gets trapped.
@@ -238,7 +241,7 @@ test('keyboard only: shell, composer, drawer, settings and sign out', async ({ p
   for (let step = 0; step < 20; step += 1) {
     await page.keyboard.press('Tab');
     const stop = await indicator();
-    if (!stop || stops.includes(stop.name)) break; // The cycle left the document or came back to its start.
+    if (!stop || stop.repeated) break; // The cycle left the document or came back to its first stop.
     expect(stop.visible, `stop ${stop.name} shows a focus indicator`).toBe(true);
     expect(stop.name.length, 'stop has an accessible name').toBeGreaterThan(0);
     stops.push(stop.name);

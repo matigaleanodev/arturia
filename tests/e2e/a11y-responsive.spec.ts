@@ -43,7 +43,10 @@ for (const view of views) {
         expect(layout.overflow).toBeLessThanOrEqual(0);
         // The composer, when present, stays fully inside the viewport and is never covered by the sidebar rail.
         const composer = page.getByRole('textbox', { name: 'Mensaje' });
-        if (await composer.isVisible()) {
+        if (view.composer === false) {
+          await expect(composer).toHaveCount(0);
+        } else {
+          await expect(composer).toBeVisible();
           const box = (await composer.boundingBox())!;
           expect(box.x).toBeGreaterThanOrEqual(0);
           expect(box.x + box.width).toBeLessThanOrEqual(viewport.width);

@@ -82,12 +82,15 @@ export interface View {
   /** The sidebar preference the view needs on widths that show a sidebar. */
   readonly sidebar?: 'collapsed' | 'expanded';
   readonly applies?: (width: number) => boolean;
+  /** False for the screens that have no message composer. */
+  readonly composer?: boolean;
   readonly run: (page: Page, width: number) => Promise<void>;
 }
 
 export const views: readonly View[] = [
   {
     name: 'acceso',
+    composer: false,
     run: async (page) => {
       await page.goto('/settings?scope=personal');
       await page.getByRole('button', { name: 'Cerrar sesión' }).click();
@@ -135,6 +138,7 @@ export const views: readonly View[] = [
   },
   {
     name: 'configuración',
+    composer: false,
     run: async (page) => {
       await page.goto('/settings?scope=personal');
       await expect(page.getByRole('heading', { name: 'Apariencia' })).toBeVisible();
