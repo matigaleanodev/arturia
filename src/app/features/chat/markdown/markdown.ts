@@ -50,8 +50,9 @@ export function safeHref(raw: string): string | null {
 
 // ---------- Blocks ----------
 
-const FENCE = /^( {0,3})(`{3,}|~{3,})[ \t]*([^\s`]*)[^`]*$/;
-const HEADING = /^ {0,3}(#{1,6})(?:[ \t]+(.*?))?(?:[ \t]+#+)?[ \t]*$/;
+// Line patterns avoid overlapping quantifiers: the text is parsed again on every streamed chunk.
+const FENCE = /^( {0,3})(`{3,}|~{3,})(.*)$/;
+const HEADING = /^ {0,3}(#{1,6})(?:[ \t]+(.*))?$/;
 const RULE = /^ {0,3}([-*_])(?:[ \t]*\1){2,}[ \t]*$/;
 const QUOTE = /^ {0,3}>/;
 const LIST_ITEM = /^( {0,3})([-*+]|\d{1,9}[.)])(?:[ \t]+(.*))?$/;
@@ -65,6 +66,24 @@ export function parseMarkdown(source: string): Block[] {
   return parseBlocks(lines, 0);
 }
 
+function fenceOpen(line: string): { indent: number; marker: string; lang: string } | null {
+  const match = FENCE.exec(line);
+  if (!match) return null;
+  const [, indent, marker, info] = match as unknown as [string, string, string, string];
+  // A backtick fence cannot have backticks in its info string.
+  if (marker[0] === '`' && info.includes('`')) return null;
+  return { indent: indent.length, marker, lang: info.trim().split(/\s/)[0] ?? '' };
+}
+
+/** Heading text without the optional closing sequence of #s, which must follow a space. */
+function headingText(raw: string): string {
+  const text = raw.trimEnd();
+  let end = text.length;
+  while (end > 0 && text[end - 1] === '#') end--;
+  if (end === 0) return '';
+  return end < text.length && (text[end - 1] === ' ' || text[end - 1] === '\t') ? text.slice(0, end).trimEnd() : text;
+}
+
 function isBlank(line: string): boolean {
   return line.trim() === '';
 }
@@ -75,7 +94,7 @@ function indentOf(line: string): number {
 
 function startsBlock(lines: readonly string[], index: number, depth: number): boolean {
   const line = lines[index]!;
-  return FENCE.test(line) || HEADING.test(line) || RULE.test(line) ||
+  return fenceOpen(line) !== null || HEADING.test(line) || RULE.test(line) ||
     (depth < MAX_BLOCK_DEPTH && (QUOTE.test(line) || LIST_ITEM.test(line))) ||
     isTableStart(lines, index);
 }
@@ -90,9 +109,9 @@ function parseBlocks(lines: readonly string[], depth: number): Block[] {
       continue;
     }
 
-    const fence = FENCE.exec(line);
+    const fence = fenceOpen(line);
     if (fence) {
-      const [, indent, marker] = fence as unknown as [string, string, string, string];
+      const { indent, marker } = fence;
       const content: string[] = [];
       index++;
       while (index < lines.length) {
@@ -102,17 +121,17 @@ function parseBlocks(lines: readonly string[], depth: number): Block[] {
           break;
         }
         const current = lines[index]!;
-        content.push(current.slice(Math.min(indent.length, indentOf(current))));
+        content.push(current.slice(Math.min(indent, indentOf(current))));
         index++;
       }
-      blocks.push({ type: 'code', lang: fence[3] ?? '', text: content.join('\n') });
+      blocks.push({ type: 'code', lang: fence.lang, text: content.join('\n') });
       continue;
     }
 
     const heading = HEADING.exec(line);
     if (heading) {
       const level = heading[1]!.length as 1 | 2 | 3 | 4 | 5 | 6;
-      blocks.push({ type: 'heading', level, children: parseInline((heading[2] ?? '').trim()) });
+      blocks.push({ type: 'heading', level, children: parseInline(headingText(heading[2] ?? '')) });
       index++;
       continue;
     }
@@ -355,6 +374,10 @@ function inline(source: string, depth: number, options: InlineOptions): Inline[]
         index = image.end;
         continue;
       }
+      // The same bracket cannot form a link either: skip the second scan.
+      buffer += '![';
+      index += 2;
+      continue;
     }
 
     if (char === '[' && options.links && depth < MAX_INLINE_DEPTH) {

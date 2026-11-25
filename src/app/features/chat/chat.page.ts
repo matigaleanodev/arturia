@@ -91,10 +91,15 @@ export class ChatPage {
 
   constructor() {
     inject(DestroyRef).onDestroy(() => clearTimeout(this.announceTimer));
+    // Signing out leaves the chat. A token refresh must not reopen it: that would abort a first send in flight.
+    effect(() => {
+      if (!this.auth.accessToken()) void this.router.navigate(['/'], { replaceUrl: true });
+    });
+
     effect(() => {
       const scope = this.scope();
       const conversationId = this.conversationId();
-      if (!this.auth.accessToken() || !scope) {
+      if (!scope || !untracked(this.auth.accessToken)) {
         void this.router.navigate(['/'], { replaceUrl: true });
         return;
       }

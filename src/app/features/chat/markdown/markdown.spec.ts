@@ -12,6 +12,12 @@ describe('parseMarkdown blocks', () => {
       paragraph(text('Una línea'), { type: 'break' }, text('otra línea')),
       { type: 'heading', level: 3, children: [text('Sub')] },
     ]);
+    expect(parseMarkdown('## C# y F#\n\n# ###\n\n```js extra\nx\n```\n\n``` a`b')).toEqual([
+      { type: 'heading', level: 2, children: [text('C# y F#')] },
+      { type: 'heading', level: 1, children: [] },
+      { type: 'code', lang: 'js', text: 'x' },
+      paragraph(text('``` a`b')),
+    ]);
   });
 
   it('parses unordered, ordered and nested lists', () => {
@@ -160,6 +166,9 @@ describe('parseInline', () => {
     const started = performance.now();
     parseInline('*a '.repeat(20_000) + '['.repeat(20_000) + '`'.repeat(5_000) + ' **x'.repeat(20_000));
     parseMarkdown('- '.repeat(5_000) + '\n' + '> '.repeat(5_000));
+    parseMarkdown('# a' + ' '.repeat(50_000) + 'x');
+    parseMarkdown('```' + 'a'.repeat(50_000) + '`');
+    parseInline('![a]('.repeat(20_000));
     expect(performance.now() - started).toBeLessThan(1_500);
   });
 });
